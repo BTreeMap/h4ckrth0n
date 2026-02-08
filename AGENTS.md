@@ -1,104 +1,135 @@
-# GitHub Copilot Guide for h4ckrth0n
+# AGENTS.md
 
-This document provides guidance on using GitHub Copilot effectively with the h4ckrth0n project.
+This repository contains **h4ckrth0n**, a Python library for shipping hackathon products quickly with strong security and performance defaults.
 
-## Project Structure
+It is designed to be “import a few lines and ship”, with:
+- opinionated batteries included
+- secure-by-default authentication and authorization
+- PostgreSQL support available immediately (driver included by default)
+- LLM tooling included by default (safe defaults and guardrails)
+- typed, tested, documented public APIs
 
+## Product principles
+
+1) Ship fast, safely:
+- the default path should be the safe path
+- “pit of success” for auth and RBAC
+
+2) Opinionated defaults, but composable:
+- provide wrapped helpers that do the right thing out of the box
+- still allow escape hatches for advanced teams
+
+3) Hackathon realism:
+- minimal code to get protected endpoints
+- minimal config to get a working database and auth
+- predictable conventions over endless knobs
+
+## Non-goals
+
+- Building a hosted platform.
+- Replacing every framework in the ecosystem.
+- Hiding security trade-offs completely. We automate safe defaults and expose the model clearly.
+
+## Stack (defaults shipped)
+
+- Web/API: FastAPI (ASGI), automatic OpenAPI
+- DB: SQLAlchemy 2.x + Alembic
+- PostgreSQL driver: Psycopg 3 (binary extra used for fast install in hackathon contexts)
+- Auth: Argon2id password hashing, JWT access tokens, refresh tokens (revocable), password reset (single-use)
+- Settings: environment-based configuration (pydantic-settings)
+- LLM: OpenAI Python SDK included by default, plus a small abstraction layer and redaction hooks
+- Redis: OPTIONAL (extra), for background queues or caching
+
+Notes:
+- uv is the project manager.
+- Keep the public API small and stable.
+
+## Repository layout
+
+- `src/h4ckrth0n/` library code (src layout)
+- `tests/` pytest tests
+- `examples/` runnable demo apps
+- `docs/` docs and decisions
+
+## Setup commands (uv)
+
+- Install and sync:
+  - `uv sync`
+- Run commands in the project environment:
+  - `uv run <command>`
+- CI should use locked mode:
+  - `uv run --locked pytest`
+
+uv automatically locks and syncs on `uv run`. `--locked` disables auto-lock updates. :contentReference[oaicite:1]{index=1}
+
+## Opinionated defaults to preserve
+
+### AuthN + AuthZ model
+- Built-in roles: `user`, `admin`
+- JWT claims include:
+  - `sub` (user id)
+  - `role` (string)
+  - `scopes` (list of strings)
+  - `iat`, `exp`, and optionally `aud`, `iss`
+- Endpoint protection should be easy:
+  - decorators or FastAPI dependencies
+  - helpers like `require_user()`, `require_admin()`, `require_scopes([...])`
+
+### Secure defaults
+- Never log secrets, tokens, Authorization headers, or reset tokens.
+- Password reset tokens:
+  - random, high-entropy
+  - stored hashed
+  - time-limited
+  - single-use (or revocable)
+- Refresh tokens:
+  - stored server-side
+  - rotated on use
+  - revocable (logout revokes)
+- Default dev mode should “just work” while still being safe:
+  - for production mode, missing critical secrets should be a hard error
+  - for dev mode, generate ephemeral secrets and emit clear warnings
+
+### Performance
+- No connection leaks. Sessions must close reliably.
+- Avoid blocking network calls in the request path unless explicitly documented.
+- Provide a small LLM client wrapper that supports timeouts and retries, with sensible defaults.
+
+## Dependency policy
+
+- Default install includes the full hackathon experience:
+  - FastAPI, SQLAlchemy, Alembic, psycopg, Argon2, OpenAI SDK
+- Redis and background queue integrations must be optional extras.
+- Dev tools go in dependency groups (ruff/mypy/pytest). dependency-groups are standardized but not supported by all tools, uv supports them. :contentReference[oaicite:2]{index=2}
+
+## Testing expectations
+
+- Use pytest.
+- Provide integration-style tests (SQLite) that cover:
+  - signup/login
+  - protected endpoint access with role and scopes
+  - refresh rotation
+  - password reset lifecycle
+- Any bug fix must include a regression test.
+
+## Docs expectations
+
+- README quickstart must be runnable and minimal.
+- Provide at least one runnable example under `examples/`:
+  - SQLite quickstart (zero-config)
+  - Postgres variant (config-only, no dependency change)
+
+## Commit hygiene for agents
+
+After changes, run:
+- `uv run ruff format .`
+- `uv run ruff check .`
+- `uv run mypy src`
+- `uv run pytest`
+
+If a design choice is non-obvious, add a short note under `docs/decisions/`.
 ```
-h4ckrth0n/
-├── h4ckrth0n/
-│   ├── __init__.py         # Main package initialization
-│   ├── auth/               # Authentication functionality
-│   ├── database/           # Database operations
-│   ├── api/                # API development tools
-│   ├── tasks/              # Background task processing
-│   └── utils/              # Utility functions
-└── tests/                  # Test suite
-```
 
-## Effective Prompts
+Notes on Postgres driver packaging:
 
-When using GitHub Copilot with h4ckrth0n, consider these effective prompting strategies:
-
-### Creating Models
-
-```python
-# Create a User model with username, email, and password fields
-```
-
-### API Endpoints
-
-```python
-# Create a RESTful CRUD endpoint for the Product model
-```
-
-### Authentication Logic
-
-```python
-# Implement JWT token validation middleware
-```
-
-### Database Queries
-
-```python
-# Create a function to query users by email with pagination
-```
-
-### Background Tasks
-
-```python
-# Define a background task that runs every hour to clean up expired sessions
-```
-
-## Common Patterns
-
-### Route Definition
-
-The h4ckrth0n library uses decorator-based routing:
-
-```python
-@app.route("/path", methods=["GET"])
-@auth.require_login
-def handler():
-    # Function implementation
-```
-
-### Model Definition
-
-Models follow the SQLAlchemy declarative pattern with h4ckrth0n enhancements:
-
-```python
-class ModelName(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    field = db.Column(db.String(255), nullable=False)
-    
-    # Helper methods often follow
-    def to_dict(self):
-        # ...
-```
-
-### Task Definition
-
-Background tasks use the @create_task decorator:
-
-```python
-@tasks.create_task(schedule="daily")
-def task_name():
-    # Task implementation
-```
-
-## Testing
-
-For test files, use pytest fixtures provided by h4ckrth0n:
-
-```python
-def test_feature(client, db_session):
-    # Test implementation using standard fixtures
-```
-
-## Best Practices
-
-1. Use type hints to improve Copilot suggestions
-2. Write descriptive docstrings for complex functions
-3. Follow the established naming conventions in existing code
-4. Break complex operations into smaller, well-named functions
+* Psycopg recommends installing the binary extra for quick installs in apps (`pip install "psycopg[binary]"`). ([psycopg.org][2])
