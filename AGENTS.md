@@ -95,6 +95,45 @@ uv automatically locks and syncs on `uv run`. `--locked` disables auto-lock upda
 - Avoid blocking network calls in the request path unless explicitly documented.
 - Provide a small LLM client wrapper that supports timeouts and retries, with sensible defaults.
 
+## Observability (killer feature)
+
+h4ckrth0n ships LLM + agent frameworks by default and offers opt-in, end-to-end observability.
+
+### Default dependencies for agentic development
+- openai (official SDK)
+- langchain, langchain-core, langchain-openai
+- langgraph
+- langsmith (used for tracing/runs, and optionally OpenTelemetry export)
+
+### Opt-in behavior
+- Observability is OFF by default.
+- When enabled, the library instruments:
+  - FastAPI requests
+  - LangChain + LangGraph runs (DAG tracing)
+  - OpenAI calls (via LangChain integration or wrapped SDK)
+  - DB activity (session/query spans)
+- Traces must include a stable trace/run id returned to callers.
+
+### Configuration conventions
+- h4ckrth0n should support both:
+  1) LangSmith-native tracing via env vars (LANGSMITH_TRACING, LANGSMITH_API_KEY, LANGSMITH_PROJECT)
+  2) OpenTelemetry export when configured (OTEL_* variables)
+
+LangSmith explicitly supports OpenTelemetry-based tracing. Never require users to write custom tracing glue.
+
+### Privacy and redaction
+- Tracing must never record secrets (API keys, JWTs, reset tokens, Authorization headers).
+- Provide redaction hooks for:
+  - prompts, tool args, retrieved documents, and model outputs
+- Provide per-route and per-graph controls:
+  - disable tracing entirely
+  - trace metadata only
+  - sampling controls
+
+### Developer ergonomics
+- Add a small middleware layer to attach trace_id/run_id to responses.
+- Provide helpers to wrap tools and graph nodes so names and metadata are consistent.
+
 ## Dependency policy
 
 - Default install includes the full hackathon experience:
