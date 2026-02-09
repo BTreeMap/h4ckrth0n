@@ -23,6 +23,7 @@ def settings(tmp_path):
         auth_signing_key="test-secret-key-for-unit-tests-minimum-32-bytes",
         env="development",
         first_user_is_admin=False,
+        password_auth_enabled=True,
     )
 
 
@@ -390,6 +391,7 @@ class TestBootstrapAdmin:
             database_url=f"sqlite:///{db_path}",
             auth_signing_key="test-key-minimum-32-bytes-for-safety",
             first_user_is_admin=True,
+            password_auth_enabled=True,
         )
         app = create_app(s)
         c = TestClient(app)
@@ -410,6 +412,7 @@ class TestBootstrapAdmin:
             database_url=f"sqlite:///{db_path}",
             auth_signing_key="test-key-minimum-32-bytes-for-safety",
             bootstrap_admin_emails=["boss@example.com"],
+            password_auth_enabled=True,
         )
         app = create_app(s)
         c = TestClient(app)

@@ -31,6 +31,16 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 30
     password_reset_expire_minutes: int = 30
 
+    # --- WebAuthn / Passkeys ---
+    rp_id: str = ""
+    origin: str = ""
+    webauthn_ttl_seconds: int = 300
+    user_verification: str = "preferred"
+    attestation: str = "none"
+
+    # --- password auth (optional extra) ---
+    password_auth_enabled: bool = False
+
     # --- admin bootstrap ---
     bootstrap_admin_emails: list[str] = []
     first_user_is_admin: bool = False
@@ -51,3 +61,30 @@ class Settings(BaseSettings):
             stacklevel=2,
         )
         return ephemeral
+
+    def effective_rp_id(self) -> str:
+        """Return the WebAuthn relying party ID."""
+        if self.rp_id:
+            return self.rp_id
+        if self.env == "production":
+            raise RuntimeError("H4CKRTH0N_RP_ID must be set in production mode.")
+        warnings.warn(
+            "Using 'localhost' as WebAuthn RP ID. Set H4CKRTH0N_RP_ID for production.",
+            UserWarning,
+            stacklevel=2,
+        )
+        return "localhost"
+
+    def effective_origin(self) -> str:
+        """Return the expected WebAuthn origin."""
+        if self.origin:
+            return self.origin
+        if self.env == "production":
+            raise RuntimeError("H4CKRTH0N_ORIGIN must be set in production mode.")
+        warnings.warn(
+            "Using 'http://localhost:8000' as WebAuthn origin. "
+            "Set H4CKRTH0N_ORIGIN for production.",
+            UserWarning,
+            stacklevel=2,
+        )
+        return "http://localhost:8000"

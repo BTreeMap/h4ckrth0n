@@ -7,14 +7,14 @@ Ship hackathon products fast, with secure-by-default auth, RBAC, Postgres readin
 ## What you get by default
 
 - **API**: FastAPI app bootstrap with OpenAPI docs
-- **Auth**: registration, login, JWT access tokens, refresh tokens (revocable), password reset (single-use, time-limited)
+- **Auth**: passkey (WebAuthn) registration and login – no passwords required
 - **AuthZ**: built-in RBAC with `user` and `admin` roles, plus scoped permissions via JWT claims
-- **Database**: SQLAlchemy 2.x + Alembic, works with SQLite (zero-config) and Postgres (driver included)
+- **Database**: SQLAlchemy 2.x + Alembic, works with SQLite (zero-config dev) and Postgres (recommended for production)
 - **LLM**: built-in LLM client wrapper (OpenAI SDK) with safe defaults and redaction hooks
 - **Observability**: opt-in LangSmith / OpenTelemetry tracing with trace ID propagation
 - **Config**: environment-driven settings via pydantic-settings
 
-Redis-based queues/caching are available as an optional extra.
+Password auth and Redis-based queues/caching are available as optional extras.
 
 ## Installation
 
@@ -24,10 +24,11 @@ Redis-based queues/caching are available as an optional extra.
 uv add h4ckrth0n
 ```
 
-Optional Redis support:
+Optional extras:
 
 ```bash
-uv add "h4ckrth0n[redis]"
+uv add "h4ckrth0n[password]"  # Argon2-based password auth (off by default)
+uv add "h4ckrth0n[redis]"     # Redis support
 ```
 
 ### pip
@@ -50,7 +51,24 @@ Run:
 uv run uvicorn your_module:app --reload
 ```
 
-Open docs at `/docs` (Swagger UI).
+Open docs at `/docs` (Swagger UI). Passkey auth routes are mounted automatically.
+
+## Auth: passkeys by default
+
+h4ckrth0n uses **passkeys (WebAuthn)** as the default authentication method. No passwords, no email required.
+
+### How it works
+
+1. **Register**: `POST /auth/passkey/register/start` → browser creates a passkey → `POST /auth/passkey/register/finish` → account created, tokens returned.
+2. **Login**: `POST /auth/passkey/login/start` → browser signs with passkey → `POST /auth/passkey/login/finish` → tokens returned. Username-less by default.
+3. **Add passkey**: authenticated users can add more passkeys via `POST /auth/passkey/add/start` + `POST /auth/passkey/add/finish`.
+4. **Revoke passkey**: `POST /auth/passkeys/{key_id}/revoke` – but **cannot revoke the last active passkey** (returns `LAST_PASSKEY` error).
+
+### ID scheme
+
+- User IDs: 32-char base32 string starting with `u` (e.g., `u3mfgh7k2n4p5q6r7s8t9v0w1x2y3z4a`)
+- Internal key IDs: 32-char base32 string starting with `k`
+- The browser's WebAuthn `credentialId` is stored separately and used for signature verification.
 
 ## Secure-by-default endpoint protection
 
@@ -64,7 +82,7 @@ app = create_app()
 
 @app.get("/me")
 def me(user=require_user()):
-    return {"id": user.id, "email": user.email, "role": user.role}
+    return {"id": user.id, "role": user.role}
 ```
 
 Admin-only endpoint:
@@ -89,20 +107,38 @@ def refund(user=require_scopes("billing:refund")):
 
 ## Auth routes
 
-h4ckrth0n mounts auth routes under `/auth` by default:
+h4ckrth0n mounts these routes by default:
 
-- `POST /auth/register` – create account (returns access + refresh tokens)
-- `POST /auth/login` – authenticate (returns access + refresh tokens)
+### Passkey (default)
+
+- `POST /auth/passkey/register/start` – begin passkey registration (creates account)
+- `POST /auth/passkey/register/finish` – complete registration (returns access + refresh tokens)
+- `POST /auth/passkey/login/start` – begin passkey login (username-less)
+- `POST /auth/passkey/login/finish` – complete login (returns access + refresh tokens)
+- `POST /auth/passkey/add/start` – begin adding a passkey (authenticated)
+- `POST /auth/passkey/add/finish` – complete adding a passkey (authenticated)
+- `GET /auth/passkeys` – list current user's passkeys (authenticated)
+- `POST /auth/passkeys/{key_id}/revoke` – revoke a passkey (authenticated, blocked if last)
+
+### Token management
+
 - `POST /auth/refresh` – rotate refresh token, get new access token
 - `POST /auth/logout` – revoke refresh token
-- `POST /auth/password-reset/request` – request a password reset
-- `POST /auth/password-reset/confirm` – confirm reset with token + new password
+
+### Password auth (optional extra)
+
+Only available when `h4ckrth0n[password]` is installed AND `H4CKRTH0N_PASSWORD_AUTH_ENABLED=true`:
+
+- `POST /auth/register` – create account with email + password
+- `POST /auth/login` – authenticate with email + password
+- `POST /auth/password-reset/request` – request password reset
+- `POST /auth/password-reset/confirm` – confirm password reset
 
 ## Database
 
 Zero-config default: SQLite is used if no database URL is provided.
 
-To use Postgres, set:
+To use Postgres (recommended for production):
 
 ```
 H4CKRTH0N_DATABASE_URL=postgresql+psycopg://user:pass@host:5432/dbname
@@ -136,12 +172,18 @@ Everything is environment-driven (prefix `H4CKRTH0N_`):
 | `H4CKRTH0N_ENV` | `development` | `development` or `production` |
 | `H4CKRTH0N_DATABASE_URL` | `sqlite:///./h4ckrth0n.db` | Database connection string |
 | `H4CKRTH0N_AUTH_SIGNING_KEY` | *(ephemeral in dev)* | JWT signing key (**required in production**) |
+| `H4CKRTH0N_RP_ID` | `localhost` *(dev only)* | WebAuthn relying party ID (**required in production**) |
+| `H4CKRTH0N_ORIGIN` | `http://localhost:8000` *(dev only)* | WebAuthn expected origin (**required in production**) |
+| `H4CKRTH0N_WEBAUTHN_TTL_SECONDS` | `300` | Challenge expiry time (seconds) |
+| `H4CKRTH0N_USER_VERIFICATION` | `preferred` | WebAuthn user verification requirement |
+| `H4CKRTH0N_ATTESTATION` | `none` | WebAuthn attestation preference |
+| `H4CKRTH0N_PASSWORD_AUTH_ENABLED` | `false` | Enable password auth routes (requires `[password]` extra) |
 | `H4CKRTH0N_BOOTSTRAP_ADMIN_EMAILS` | `[]` | JSON list of emails that get admin role on registration |
 | `H4CKRTH0N_FIRST_USER_IS_ADMIN` | `false` | First registered user becomes admin (dev convenience) |
 | `OPENAI_API_KEY` | — | OpenAI API key for the LLM module |
 
-In development mode, missing signing keys generate ephemeral secrets with a warning.
-In production mode, missing critical secrets cause a hard error.
+In development mode, missing signing keys and WebAuthn settings generate ephemeral/localhost defaults with warnings.
+In production mode, missing critical secrets and `RP_ID`/`ORIGIN` cause a hard error.
 
 ## Observability (opt-in)
 
