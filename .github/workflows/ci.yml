@@ -24,7 +24,7 @@ jobs:
         run: uv python install 3.11
 
       - name: Install dependencies (locked)
-        run: uv sync --locked
+        run: uv sync --locked --all-extras
 
       - name: Ruff format check
         run: uv run --locked ruff format --check .
