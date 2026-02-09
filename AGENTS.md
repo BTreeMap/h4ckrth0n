@@ -141,6 +141,13 @@ LangSmith explicitly supports OpenTelemetry-based tracing. Never require users t
 - Redis and background queue integrations must be optional extras.
 - Dev tools go in dependency groups (ruff/mypy/pytest). dependency-groups are standardized but not supported by all tools, uv supports them. :contentReference[oaicite:2]{index=2}
 
+## Dependency updates (Renovate)
+
+- Renovate runs via the GitHub App and is configured in `renovate.json`.
+- Current scope (today): `pyproject.toml` (uv-managed), weekly `uv.lock` maintenance, and GitHub Actions workflows.
+- Policy: minor/patch updates may automerge only after CI passes; major updates never automerge and require human review.
+- If this repo gains new ecosystems (Dockerfiles, npm, cargo, Terraform, etc.), extend `renovate.json` with the correct matchManagers/matchDatasources and grouping while keeping the same automerge policy. Keep the config minimal and truthful by only enabling managers for ecosystems that exist in the repo.
+
 ## Testing expectations
 
 - Use pytest.
