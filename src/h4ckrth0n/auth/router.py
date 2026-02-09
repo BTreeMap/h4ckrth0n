@@ -88,9 +88,7 @@ def _password_router() -> APIRouter:
         try:
             user = register_user(db, body.email, body.password, settings)
         except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail=str(exc)
-            ) from None
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
         scopes = [s for s in user.scopes.split(",") if s]
         access = create_access_token(
             user_id=user.id,
@@ -100,9 +98,7 @@ def _password_router() -> APIRouter:
             algorithm=settings.auth_algorithm,
             expire_minutes=settings.access_token_expire_minutes,
         )
-        refresh = create_refresh_token(
-            db, user.id, expire_days=settings.refresh_token_expire_days
-        )
+        refresh = create_refresh_token(db, user.id, expire_days=settings.refresh_token_expire_days)
         return schemas.TokenResponse(access_token=access, refresh_token=refresh)
 
     @pw.post("/login", response_model=schemas.TokenResponse)
@@ -122,9 +118,7 @@ def _password_router() -> APIRouter:
             algorithm=settings.auth_algorithm,
             expire_minutes=settings.access_token_expire_minutes,
         )
-        refresh = create_refresh_token(
-            db, user.id, expire_days=settings.refresh_token_expire_days
-        )
+        refresh = create_refresh_token(db, user.id, expire_days=settings.refresh_token_expire_days)
         return schemas.TokenResponse(access_token=access, refresh_token=refresh)
 
     @pw.post("/password-reset/request", response_model=schemas.MessageResponse)
@@ -149,9 +143,7 @@ def _password_router() -> APIRouter:
         try:
             confirm_password_reset(db, body.token, body.new_password)
         except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
-            ) from None
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
         return schemas.MessageResponse(message="Password has been reset.")
 
     return pw

@@ -5,7 +5,8 @@ from __future__ import annotations
 from fastapi import FastAPI
 from sqlalchemy.orm import sessionmaker
 
-from h4ckrth0n.auth.passkeys.router import passkeys_router, router as passkey_router
+from h4ckrth0n.auth.passkeys.router import passkeys_router
+from h4ckrth0n.auth.passkeys.router import router as passkey_router
 from h4ckrth0n.auth.router import router as auth_router
 from h4ckrth0n.config import Settings
 from h4ckrth0n.db.base import Base

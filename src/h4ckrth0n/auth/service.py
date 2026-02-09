@@ -29,8 +29,7 @@ def _require_password_extra() -> tuple:  # type: ignore[type-arg]
         return hash_password, verify_password
     except ImportError as exc:
         raise RuntimeError(
-            'Password auth requires the "password" extra: '
-            'pip install "h4ckrth0n[password]"'
+            'Password auth requires the "password" extra: pip install "h4ckrth0n[password]"'
         ) from exc
 
 

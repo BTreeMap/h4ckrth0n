@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from base64 import urlsafe_b64decode, urlsafe_b64encode
+from typing import Any
 
 from webauthn import (
     generate_authentication_options,
@@ -12,12 +13,14 @@ from webauthn import (
     verify_authentication_response,
     verify_registration_response,
 )
+from webauthn.helpers import (
+    parse_authentication_credential_json,
+    parse_registration_credential_json,
+)
 from webauthn.helpers.structs import (
     AttestationConveyancePreference,
-    AuthenticationCredential,
     AuthenticatorSelectionCriteria,
     PublicKeyCredentialDescriptor,
-    RegistrationCredential,
     ResidentKeyRequirement,
     UserVerificationRequirement,
 )
@@ -55,7 +58,7 @@ def make_registration_options(
     challenge: bytes,
     settings: Settings,
     exclude_credentials: list[PublicKeyCredentialDescriptor] | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """Build PublicKeyCredentialCreationOptions and return as JSON-safe dict."""
     opts = generate_registration_options(
         rp_id=rp_id,
@@ -72,7 +75,8 @@ def make_registration_options(
         ),
         exclude_credentials=exclude_credentials or [],
     )
-    return json.loads(options_to_json(opts))
+    result: dict[str, Any] = json.loads(options_to_json(opts))
+    return result
 
 
 def make_authentication_options(
@@ -81,7 +85,7 @@ def make_authentication_options(
     challenge: bytes,
     settings: Settings,
     allow_credentials: list[PublicKeyCredentialDescriptor] | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """Build PublicKeyCredentialRequestOptions and return as JSON-safe dict."""
     opts = generate_authentication_options(
         rp_id=rp_id,
@@ -90,12 +94,13 @@ def make_authentication_options(
         user_verification=_uv(settings),
         allow_credentials=allow_credentials or [],
     )
-    return json.loads(options_to_json(opts))
+    result: dict[str, Any] = json.loads(options_to_json(opts))
+    return result
 
 
 def verify_registration(
     *,
-    credential_json: dict,
+    credential_json: dict[str, Any],
     expected_challenge: bytes,
     expected_rp_id: str,
     expected_origin: str,
@@ -104,7 +109,7 @@ def verify_registration(
 
     Returns ``(credential_id, public_key, sign_count, aaguid)``.
     """
-    cred = RegistrationCredential.model_validate(credential_json)
+    cred = parse_registration_credential_json(json.dumps(credential_json))
     verified = verify_registration_response(
         credential=cred,
         expected_challenge=expected_challenge,
@@ -121,7 +126,7 @@ def verify_registration(
 
 def verify_authentication(
     *,
-    credential_json: dict,
+    credential_json: dict[str, Any],
     expected_challenge: bytes,
     expected_rp_id: str,
     expected_origin: str,
@@ -132,7 +137,7 @@ def verify_authentication(
 
     Returns ``(credential_id, new_sign_count)``.
     """
-    cred = AuthenticationCredential.model_validate(credential_json)
+    cred = parse_authentication_credential_json(json.dumps(credential_json))
     verified = verify_authentication_response(
         credential=cred,
         expected_challenge=expected_challenge,

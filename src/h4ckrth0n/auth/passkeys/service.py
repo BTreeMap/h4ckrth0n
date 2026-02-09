@@ -9,7 +9,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.orm import Session
 
 from h4ckrth0n.auth.models import User, WebAuthnChallenge, WebAuthnCredential
-from h4ckrth0n.auth.passkeys.ids import new_key_id, new_user_id
+from h4ckrth0n.auth.passkeys.ids import new_key_id
 from h4ckrth0n.auth.passkeys.webauthn import (
     base64url_to_bytes,
     bytes_to_base64url,
@@ -245,8 +245,7 @@ def start_add_credential(
     from webauthn.helpers.structs import PublicKeyCredentialDescriptor
 
     exclude = [
-        PublicKeyCredentialDescriptor(id=base64url_to_bytes(c.credential_id))
-        for c in existing
+        PublicKeyCredentialDescriptor(id=base64url_to_bytes(c.credential_id)) for c in existing
     ]
 
     challenge_bytes = _new_challenge()
@@ -360,9 +359,7 @@ def revoke_passkey(db: Session, user: User, key_id: str) -> None:
         .count()
     )
     if active_count <= 1:
-        raise LastPasskeyError(
-            "Cannot revoke the last active passkey. Add another passkey first."
-        )
+        raise LastPasskeyError("Cannot revoke the last active passkey. Add another passkey first.")
 
     cred.revoked_at = datetime.now(UTC)
     db.commit()

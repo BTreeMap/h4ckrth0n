@@ -35,7 +35,9 @@ It is designed to be “import a few lines and ship”, with:
 - Web/API: FastAPI (ASGI), automatic OpenAPI
 - DB: SQLAlchemy 2.x + Alembic
 - PostgreSQL driver: Psycopg 3 (binary extra used for fast install in hackathon contexts)
-- Auth: Argon2id password hashing, JWT access tokens, refresh tokens (revocable), password reset (single-use)
+- Auth: Passkeys (WebAuthn) via py_webauthn – default, no passwords required
+- Auth (optional): Argon2id password hashing via `h4ckrth0n[password]` extra
+- JWT: PyJWT with access tokens, refresh tokens (revocable)
 - Settings: environment-based configuration (pydantic-settings)
 - LLM: OpenAI Python SDK included by default, plus a small abstraction layer and redaction hooks
 - Redis: OPTIONAL (extra), for background queues or caching
@@ -65,6 +67,8 @@ uv automatically locks and syncs on `uv run`. `--locked` disables auto-lock upda
 ## Opinionated defaults to preserve
 
 ### AuthN + AuthZ model
+- Default auth: passkeys (WebAuthn) via py_webauthn
+- Password auth: optional extra (`h4ckrth0n[password]`), off by default
 - Built-in roles: `user`, `admin`
 - JWT claims include:
   - `sub` (user id)
@@ -75,9 +79,29 @@ uv automatically locks and syncs on `uv run`. `--locked` disables auto-lock upda
   - decorators or FastAPI dependencies
   - helpers like `require_user()`, `require_admin()`, `require_scopes([...])`
 
+### ID scheme
+- All primary IDs use a 32-character base32 scheme from 20 random bytes
+- User IDs: first character forced to `u` (e.g., `u3mfgh7k2n4p5q6r7s8t9v0w1x2y3z4a`)
+- Internal credential key IDs: first character forced to `k`
+- Helpers: `new_user_id()`, `new_key_id()`, `is_user_id()`, `is_key_id()`
+- Never use email as user ID
+- WebAuthn credential_id from browser is stored separately (base64url), not as the internal key ID
+
+### Multi-passkey model and last-passkey invariant
+- Users can register multiple passkeys
+- A user's last active (non-revoked) passkey **cannot be revoked** (LAST_PASSKEY error)
+- This check is transactional (SELECT ... FOR UPDATE in Postgres) to prevent race conditions
+- Revoked passkeys have `revoked_at` set; they can never be un-revoked
+
+### WebAuthn challenges
+- Challenge state stored server-side in `webauthn_challenges` table
+- Default TTL: 300 seconds (configurable via `H4CKRTH0N_WEBAUTHN_TTL_SECONDS`)
+- Challenges are single-use (consumed on successful finish)
+- Expired challenges can be cleaned up via `cleanup_expired_challenges()`
+
 ### Secure defaults
-- Never log secrets, tokens, Authorization headers, or reset tokens.
-- Password reset tokens:
+- Never log secrets, tokens, Authorization headers, WebAuthn assertions, or attestation objects.
+- Password reset tokens (password extra only):
   - random, high-entropy
   - stored hashed
   - time-limited
@@ -86,9 +110,12 @@ uv automatically locks and syncs on `uv run`. `--locked` disables auto-lock upda
   - stored server-side
   - rotated on use
   - revocable (logout revokes)
-- Default dev mode should “just work” while still being safe:
-  - for production mode, missing critical secrets should be a hard error
-  - for dev mode, generate ephemeral secrets and emit clear warnings
+- WebAuthn challenges:
+  - stored server-side, single-use, time-limited (default 5 min)
+  - origin and rpId validated strictly in production
+- Default dev mode should "just work" while still being safe:
+  - for production mode, missing critical secrets and WebAuthn settings are a hard error
+  - for dev mode, generate ephemeral secrets and use localhost defaults with clear warnings
 
 ### Performance
 - No connection leaks. Sessions must close reliably.
@@ -137,7 +164,8 @@ LangSmith explicitly supports OpenTelemetry-based tracing. Never require users t
 ## Dependency policy
 
 - Default install includes the full hackathon experience:
-  - FastAPI, SQLAlchemy, Alembic, psycopg, Argon2, OpenAI SDK
+  - FastAPI, SQLAlchemy, Alembic, psycopg, py_webauthn, OpenAI SDK
+- Password auth (Argon2) is an optional extra: `h4ckrth0n[password]`
 - Redis and background queue integrations must be optional extras.
 - Dev tools go in dependency groups (ruff/mypy/pytest). dependency-groups are standardized but not supported by all tools, uv supports them. :contentReference[oaicite:2]{index=2}
 
@@ -152,10 +180,12 @@ LangSmith explicitly supports OpenTelemetry-based tracing. Never require users t
 
 - Use pytest.
 - Provide integration-style tests (SQLite) that cover:
-  - signup/login
+  - passkey registration/login flow state
+  - ID generators (length, prefix, charset)
+  - last-passkey invariant (cannot revoke last active passkey)
   - protected endpoint access with role and scopes
   - refresh rotation
-  - password reset lifecycle
+  - password auth lifecycle (when password extra enabled)
 - Any bug fix must include a regression test.
 
 ## Docs expectations
