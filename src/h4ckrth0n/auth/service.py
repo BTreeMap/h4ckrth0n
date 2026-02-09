@@ -1,4 +1,8 @@
-"""Auth business logic."""
+"""Auth business logic.
+
+Password-based functions require the ``h4ckrth0n[password]`` extra (argon2-cffi).
+They will raise ``RuntimeError`` if called without the extra installed.
+"""
 
 from __future__ import annotations
 
@@ -9,13 +13,25 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.orm import Session
 
 from h4ckrth0n.auth.models import PasswordResetToken, RefreshToken, User
-from h4ckrth0n.auth.passwords import hash_password, verify_password
 from h4ckrth0n.config import Settings
 
 
 def _hash_token(token: str) -> str:
     """SHA-256 hash a token for storage."""
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _require_password_extra() -> tuple:  # type: ignore[type-arg]
+    """Import argon2 password helpers. Raises if extra not installed."""
+    try:
+        from h4ckrth0n.auth.passwords import hash_password, verify_password
+
+        return hash_password, verify_password
+    except ImportError as exc:
+        raise RuntimeError(
+            'Password auth requires the "password" extra: '
+            'pip install "h4ckrth0n[password]"'
+        ) from exc
 
 
 def _is_bootstrap_admin(email: str, settings: Settings, db: Session) -> bool:
@@ -35,6 +51,7 @@ def register_user(
     password: str,
     settings: Settings,
 ) -> User:
+    hash_password, _verify = _require_password_extra()
     existing = db.query(User).filter(User.email == email).first()
     if existing:
         raise ValueError("Email already registered")
@@ -51,8 +68,11 @@ def register_user(
 
 
 def authenticate_user(db: Session, email: str, password: str) -> User | None:
+    _hash, verify_password = _require_password_extra()
     user = db.query(User).filter(User.email == email).first()
     if user is None:
+        return None
+    if not user.password_hash:
         return None
     if not verify_password(password, user.password_hash):
         return None
@@ -130,6 +150,7 @@ def create_password_reset_token(
 
 
 def confirm_password_reset(db: Session, raw_token: str, new_password: str) -> None:
+    hash_password, _verify = _require_password_extra()
     hashed = _hash_token(raw_token)
     prt = (
         db.query(PasswordResetToken)
