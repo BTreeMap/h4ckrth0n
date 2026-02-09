@@ -3,6 +3,7 @@
 This repository contains **h4ckrth0n**, a Python library for shipping hackathon products quickly with strong security and performance defaults.
 
 It is designed to be “import a few lines and ship”, with:
+
 - opinionated batteries included
 - secure-by-default authentication and authorization
 - PostgreSQL support available immediately (driver included by default)
@@ -12,14 +13,17 @@ It is designed to be “import a few lines and ship”, with:
 ## Product principles
 
 1) Ship fast, safely:
+
 - the default path should be the safe path
 - “pit of success” for auth and RBAC
 
-2) Opinionated defaults, but composable:
+1) Opinionated defaults, but composable:
+
 - provide wrapped helpers that do the right thing out of the box
 - still allow escape hatches for advanced teams
 
-3) Hackathon realism:
+1) Hackathon realism:
+
 - minimal code to get protected endpoints
 - minimal config to get a working database and auth
 - predictable conventions over endless knobs
@@ -43,6 +47,7 @@ It is designed to be “import a few lines and ship”, with:
 - Redis: OPTIONAL (extra), for background queues or caching
 
 Notes:
+
 - uv is the project manager.
 - Keep the public API small and stable.
 
@@ -62,11 +67,12 @@ Notes:
 - CI should use locked mode:
   - `uv run --locked pytest`
 
-uv automatically locks and syncs on `uv run`. `--locked` disables auto-lock updates. :contentReference[oaicite:1]{index=1}
+uv automatically locks and syncs on `uv run`. `--locked` disables auto-lock updates.
 
 ## Opinionated defaults to preserve
 
 ### AuthN + AuthZ model
+
 - Default auth: passkeys (WebAuthn) via py_webauthn
 - Password auth: optional extra (`h4ckrth0n[password]`), off by default
 - Built-in roles: `user`, `admin`
@@ -80,6 +86,7 @@ uv automatically locks and syncs on `uv run`. `--locked` disables auto-lock upda
   - helpers like `require_user()`, `require_admin()`, `require_scopes([...])`
 
 ### ID scheme
+
 - All primary IDs use a 32-character base32 scheme from 20 random bytes
 - User IDs: first character forced to `u` (e.g., `u3mfgh7k2n4p5q6r7s8t9v0w1x2y3z4a`)
 - Internal credential key IDs: first character forced to `k`
@@ -88,18 +95,21 @@ uv automatically locks and syncs on `uv run`. `--locked` disables auto-lock upda
 - WebAuthn credential_id from browser is stored separately (base64url), not as the internal key ID
 
 ### Multi-passkey model and last-passkey invariant
+
 - Users can register multiple passkeys
 - A user's last active (non-revoked) passkey **cannot be revoked** (LAST_PASSKEY error)
 - This check is transactional (SELECT ... FOR UPDATE in Postgres) to prevent race conditions
 - Revoked passkeys have `revoked_at` set; they can never be un-revoked
 
 ### WebAuthn challenges
+
 - Challenge state stored server-side in `webauthn_challenges` table
 - Default TTL: 300 seconds (configurable via `H4CKRTH0N_WEBAUTHN_TTL_SECONDS`)
 - Challenges are single-use (consumed on successful finish)
 - Expired challenges can be cleaned up via `cleanup_expired_challenges()`
 
 ### Secure defaults
+
 - Never log secrets, tokens, Authorization headers, WebAuthn assertions, or attestation objects.
 - Password reset tokens (password extra only):
   - random, high-entropy
@@ -118,6 +128,7 @@ uv automatically locks and syncs on `uv run`. `--locked` disables auto-lock upda
   - for dev mode, generate ephemeral secrets and use localhost defaults with clear warnings
 
 ### Performance
+
 - No connection leaks. Sessions must close reliably.
 - Avoid blocking network calls in the request path unless explicitly documented.
 - Provide a small LLM client wrapper that supports timeouts and retries, with sensible defaults.
@@ -127,12 +138,14 @@ uv automatically locks and syncs on `uv run`. `--locked` disables auto-lock upda
 h4ckrth0n ships LLM + agent frameworks by default and offers opt-in, end-to-end observability.
 
 ### Default dependencies for agentic development
+
 - openai (official SDK)
 - langchain, langchain-core, langchain-openai
 - langgraph
 - langsmith (used for tracing/runs, and optionally OpenTelemetry export)
 
 ### Opt-in behavior
+
 - Observability is OFF by default.
 - When enabled, the library instruments:
   - FastAPI requests
@@ -142,6 +155,7 @@ h4ckrth0n ships LLM + agent frameworks by default and offers opt-in, end-to-end 
 - Traces must include a stable trace/run id returned to callers.
 
 ### Configuration conventions
+
 - h4ckrth0n should support both:
   1) LangSmith-native tracing via env vars (LANGSMITH_TRACING, LANGSMITH_API_KEY, LANGSMITH_PROJECT)
   2) OpenTelemetry export when configured (OTEL_* variables)
@@ -149,6 +163,7 @@ h4ckrth0n ships LLM + agent frameworks by default and offers opt-in, end-to-end 
 LangSmith explicitly supports OpenTelemetry-based tracing. Never require users to write custom tracing glue.
 
 ### Privacy and redaction
+
 - Tracing must never record secrets (API keys, JWTs, reset tokens, Authorization headers).
 - Provide redaction hooks for:
   - prompts, tool args, retrieved documents, and model outputs
@@ -158,6 +173,7 @@ LangSmith explicitly supports OpenTelemetry-based tracing. Never require users t
   - sampling controls
 
 ### Developer ergonomics
+
 - Add a small middleware layer to attach trace_id/run_id to responses.
 - Provide helpers to wrap tools and graph nodes so names and metadata are consistent.
 
@@ -167,14 +183,29 @@ LangSmith explicitly supports OpenTelemetry-based tracing. Never require users t
   - FastAPI, SQLAlchemy, Alembic, psycopg, py_webauthn, OpenAI SDK
 - Password auth (Argon2) is an optional extra: `h4ckrth0n[password]`
 - Redis and background queue integrations must be optional extras.
-- Dev tools go in dependency groups (ruff/mypy/pytest). dependency-groups are standardized but not supported by all tools, uv supports them. :contentReference[oaicite:2]{index=2}
+- Dev tools go in dependency groups (ruff/mypy/pytest). dependency-groups are standardized but not supported by all tools, uv supports them.
 
-## Dependency updates (Renovate)
+## Dependency updates
+
+### Renovate
 
 - Renovate runs via the GitHub App and is configured in `renovate.json`.
 - Current scope (today): `pyproject.toml` (uv-managed), weekly `uv.lock` maintenance, and GitHub Actions workflows.
 - Policy: minor/patch updates may automerge only after CI passes; major updates never automerge and require human review.
 - If this repo gains new ecosystems (Dockerfiles, npm, cargo, Terraform, etc.), extend `renovate.json` with the correct matchManagers/matchDatasources and grouping while keeping the same automerge policy. Keep the config minimal and truthful by only enabling managers for ecosystems that exist in the repo.
+
+### Keeping dependencies current (uv)
+
+Agents should keep the dependency set healthy and forward-moving.
+
+- Periodically run:
+  - `uv sync --upgrade`
+- Then fix any compatibility issues that arise:
+  - address breaking changes by migrating code forward
+  - fix deprecation warnings proactively
+- Do not downgrade dependencies to “make things pass” unless the feature we rely on is removed or a security/stability regression forces it. Prefer best-effort migration to newer versions.
+
+When `uv sync --upgrade` changes `uv.lock`, include those changes in the PR with accompanying code fixes and tests.
 
 ## Testing expectations
 
@@ -197,15 +228,19 @@ LangSmith explicitly supports OpenTelemetry-based tracing. Never require users t
 
 ## Commit hygiene for agents
 
-After changes, run:
-- `uv run ruff format .`
-- `uv run ruff check .`
-- `uv run mypy src`
-- `uv run pytest`
+### Required pre-commit checks (must run before committing)
+
+Before committing any changes, format the code and run the same checks used in CI (locked mode):
+
+- Format (apply changes):
+  - `uv run --locked ruff format .`
+
+- Verify the full CI gate locally:
+  - `uv run --locked ruff format --check .`
+  - `uv run --locked ruff check .`
+  - `uv run --locked mypy src`
+  - `uv run --locked pytest -v`
+
+Do not commit code that fails any of the above commands. Fix issues first.
 
 If a design choice is non-obvious, add a short note under `docs/decisions/`.
-```
-
-Notes on Postgres driver packaging:
-
-* Psycopg recommends installing the binary extra for quick installs in apps (`pip install "psycopg[binary]"`). ([psycopg.org][2])
