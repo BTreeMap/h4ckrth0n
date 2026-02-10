@@ -45,8 +45,24 @@ jobs:
     defaults:
       run:
         working-directory: packages/create-h4ckath0n/templates/fullstack/web
+    env:
+      H4CKATH0N_DATABASE_URL: "sqlite:///./ci-openapi.db"
     steps:
       - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install backend dependencies (locked)
+        run: uv sync --locked --all-extras
+        working-directory: .
 
       - name: Set up Node
         uses: actions/setup-node@v6
@@ -57,6 +73,18 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Start backend for codegen
+        run: |
+          uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --app-dir packages/create-h4ckath0n/templates/fullstack/api &
+          node packages/create-h4ckath0n/templates/fullstack/web/scripts/waitForOpenApi.mjs
+        working-directory: .
+
+      - name: Generate API types
+        run: npm run gen:api
+
+      - name: Check codegen drift
+        run: git diff --exit-code src/api/generated/
 
       - name: Lint
         run: npm run lint

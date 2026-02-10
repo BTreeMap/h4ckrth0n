@@ -285,6 +285,46 @@ When modifying files under `packages/create-h4ckath0n/templates/fullstack/web/`,
 
 Do not commit frontend template changes that fail these checks.
 
+### OpenAPI codegen and typed client
+
+The frontend template uses **openapi-typescript** and **openapi-fetch** to generate TypeScript types from the backend OpenAPI schema. The generated output is committed to git and must stay in sync with the backend.
+
+**Generated output path:** `packages/create-h4ckath0n/templates/fullstack/web/src/api/generated/`
+
+**When to regenerate:**
+- After modifying backend Pydantic models, route signatures, or `response_model` declarations
+- After modifying frontend API consumption code
+
+**How to regenerate (requires backend running on port 8000):**
+
+```bash
+# From the web template directory:
+npm run gen:api
+```
+
+Or use the full-stack dev workflow which handles this automatically:
+
+```bash
+# From the web template directory:
+npm run dev:fullstack
+```
+
+**Drift check (must pass before committing):**
+
+```bash
+npm run gen:api
+git diff --exit-code src/api/generated/
+```
+
+CI enforces this: the `frontend` job starts the backend, runs `gen:api`, and fails if the generated output differs from what's committed.
+
+**Type migration rules (enforced):**
+- On-wire JSON types (request/response bodies) **must** come from `src/api/generated/schema.ts`. Do not create manual TS interfaces for backend shapes.
+- Frontend-only types (UI state, view models, form state) are allowed but must use explicit naming (`FooViewModel`, `FooFormState`) and include a short `/** Frontend-only: ... */` comment.
+- If a type mixes backend and frontend-only fields, split it: import the backend type from the generated schema and compose/extend it with a frontend wrapper.
+- Do not keep duplicate "DTO" style types. Duplicates are drift vectors.
+- All API calls should go through the typed clients in `src/api/client.ts` (`apiClient` for authenticated, `publicApiClient` for unauthenticated endpoints).
+
 ### Scaffold CLI checks
 
 When modifying `packages/create-h4ckath0n/bin/` or `packages/create-h4ckath0n/lib/`:

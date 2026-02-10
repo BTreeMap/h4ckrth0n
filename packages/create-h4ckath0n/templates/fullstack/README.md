@@ -31,7 +31,24 @@ API runs at http://localhost:8000, web at http://localhost:5173.
 
 ## Development
 
-### API
+### Full-stack (recommended)
+
+```bash
+cd web
+npm install
+npm run dev:fullstack
+```
+
+This single command:
+1. Starts the backend API server (uvicorn with auto-reload)
+2. Waits for the OpenAPI schema to become available
+3. Generates TypeScript types from the backend schema (`src/api/generated/`)
+4. Watches backend files and regenerates types on changes
+5. Starts the Vite dev server
+
+API runs at http://localhost:8000, web at http://localhost:5173.
+
+### API only
 
 ```bash
 cd api
@@ -39,12 +56,21 @@ uv sync
 uv run uvicorn app.main:app --reload
 ```
 
-### Web
+### Web only
 
 ```bash
 cd web
 npm install
 npm run dev
+```
+
+### Regenerating API types
+
+If the backend models change, regenerate the typed client (requires backend running):
+
+```bash
+cd web
+npm run gen:api
 ```
 
 ### Environment
