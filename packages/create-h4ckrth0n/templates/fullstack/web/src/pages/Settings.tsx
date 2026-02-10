@@ -69,7 +69,7 @@ export function Settings() {
       if (!startRes.ok) throw new Error("Failed to start passkey addition");
 
       const createOptions = toCreateOptions(
-        startRes.data.options as Parameters<typeof toCreateOptions>[0]
+        startRes.data.options as unknown as Parameters<typeof toCreateOptions>[0]
       );
       const credential = (await navigator.credentials.create(
         createOptions

@@ -123,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!startRes.ok) throw new Error("Registration start failed");
 
       const createOptions = toCreateOptions(
-        startRes.data.options as Parameters<typeof toCreateOptions>[0],
+        startRes.data.options as unknown as Parameters<typeof toCreateOptions>[0],
       );
       const credential = (await navigator.credentials.create(
         createOptions,
@@ -176,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!startRes.ok) throw new Error("Login start failed");
 
     const getOptions = toGetOptions(
-      startRes.data.options as Parameters<typeof toGetOptions>[0],
+      startRes.data.options as unknown as Parameters<typeof toGetOptions>[0],
     );
     const credential = (await navigator.credentials.get(
       getOptions,
