@@ -8,6 +8,6 @@ add_csp_middleware(app)
 
 
 @app.get("/healthz")
-def healthz():  # type: ignore[no-untyped-def]
+def healthz() -> dict[str, str]:
     """Readiness check for E2E and deployment probes."""
     return {"status": "ok"}

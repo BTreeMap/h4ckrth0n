@@ -17,7 +17,7 @@ class JWTClaims(BaseModel):
     exp: datetime
     aud: str | None = None
     iss: str | None = None
-    # Server-issued tokens may include role/scopes; device tokens do not.
+    # Device-signed JWTs omit role/scopes; defaults match the "user" role.
     role: str = "user"
     scopes: list[str] = []
 
