@@ -8,8 +8,8 @@ Open http://localhost:8000/docs to interact with the API.
 Auth flow (passkeys):
     1. POST /auth/passkey/register/start  → get options
     2. (browser) navigator.credentials.create(options)
-    3. POST /auth/passkey/register/finish → get tokens
-    4. Use access_token in Authorization header
+    3. POST /auth/passkey/register/finish → get user_id + device_id
+    4. Client mints device-signed ES256 JWTs for subsequent API calls
 
 See /passkey-demo for a minimal browser-based example.
 """
@@ -22,7 +22,7 @@ app = create_app()
 
 @app.get("/me")
 def me(user=require_user()):
-    """Return current user info (requires passkey login)."""
+    """Return current user info (requires device-signed JWT)."""
     return {"id": user.id, "role": user.role}
 
 
@@ -33,8 +33,8 @@ def admin_dashboard(user=require_admin()):
 
 
 @app.post("/billing/refund")
-def refund(claims=require_scopes("billing:refund")):
-    """Scoped endpoint – requires billing:refund scope in JWT."""
+def refund(user=require_scopes("billing:refund")):
+    """Scoped endpoint – requires billing:refund scope (from DB)."""
     return {"status": "queued"}
 
 
@@ -64,7 +64,8 @@ PASSKEY_DEMO_HTML = """<!DOCTYPE html>
 <pre id="output"></pre>
 <script>
 const API = '';
-let token = null;
+let deviceId = null;
+let userId = null;
 
 function b64url(buf) {
     return btoa(String.fromCharCode(...new Uint8Array(buf)))
@@ -99,8 +100,9 @@ async function register() {
         method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
     });
     const result = await finish.json();
-    if(result.access_token) {
-        token = result.access_token;
+    if(result.user_id && result.device_id) {
+        userId = result.user_id;
+        deviceId = result.device_id;
         document.getElementById('add').disabled=false;
     }
     log('Register result: ' + JSON.stringify(result, null, 2));
@@ -133,45 +135,17 @@ async function login() {
         body:JSON.stringify(body)
     });
     const result = await finish.json();
-    if(result.access_token) {
-        token = result.access_token;
+    if(result.user_id && result.device_id) {
+        userId = result.user_id;
+        deviceId = result.device_id;
         document.getElementById('add').disabled=false;
     }
     log('Login result: ' + JSON.stringify(result, null, 2));
 }
 
 async function addPasskey() {
-    if(!token) { log('Login first'); return; }
-    log('Adding passkey...');
-    const start = await fetch(API+'/auth/passkey/add/start', {
-        method:'POST', headers:{'Authorization':'Bearer '+token}
-    });
-    const {flow_id, options} = await start.json();
-    options.challenge = b64urlDecode(options.challenge);
-    options.user.id = b64urlDecode(options.user.id);
-    if(options.excludeCredentials) {
-        options.excludeCredentials.forEach(c=>c.id=b64urlDecode(c.id));
-    }
-    const cred = await navigator.credentials.create({publicKey: options});
-    const body = {
-        flow_id,
-        credential: {
-            id: cred.id, rawId: b64url(cred.rawId), type: cred.type,
-            response: {
-                attestationObject: b64url(cred.response.attestationObject),
-                clientDataJSON: b64url(cred.response.clientDataJSON),
-            }
-        }
-    };
-    const finish = await fetch(API+'/auth/passkey/add/finish', {
-        method:'POST',
-        headers:{
-            'Content-Type':'application/json',
-            'Authorization':'Bearer '+token
-        },
-        body:JSON.stringify(body)
-    });
-    log('Add result: ' + JSON.stringify(await finish.json(), null, 2));
+    if(!deviceId) { log('Login first'); return; }
+    log('Adding passkey... (requires device-signed JWT – use the web template for full support)');
 }
 
 document.getElementById('register').onclick = register;

@@ -14,14 +14,14 @@ and recovery guidance.
 | Credential stuffing | No reusable passwords to stuff. |
 | Server-side credential theft | Only public keys stored server-side; private keys never leave the authenticator. |
 | Replay attacks | Each ceremony uses a random, single-use, time-limited challenge. |
-| Session hijacking | Standard JWT + refresh token rotation with server-side revocation. |
+| Session hijacking | Device-signed short-lived JWTs held in memory only; no persistent tokens to steal. |
 
 ### Trust boundaries
 
 - **Authenticator** (hardware key, platform biometric): stores private key material.
 - **Browser**: mediates WebAuthn API calls, enforces origin checks.
 - **Server** (h4ckath0n): stores public keys, validates attestation/assertion,
-  issues JWT tokens.
+  verifies device-signed ES256 JWTs, enforces authorization from DB.
 
 ### What passkeys do NOT protect against
 
@@ -81,7 +81,6 @@ exposing cryptographic material.
 |---|---|---|
 | `H4CKATH0N_RP_ID` | `example.com` | WebAuthn relying party ID (typically the domain) |
 | `H4CKATH0N_ORIGIN` | `https://example.com` | Expected origin (scheme + host + optional port) |
-| `H4CKATH0N_AUTH_SIGNING_KEY` | *(secret)* | JWT signing key |
 | `H4CKATH0N_ENV` | `production` | Enables strict validation |
 
 ### Development defaults
@@ -90,7 +89,6 @@ In `development` mode (default), h4ckath0n uses safe localhost defaults:
 
 - `rp_id`: `localhost`
 - `origin`: `http://localhost:8000`
-- `auth_signing_key`: ephemeral (regenerated each startup)
 
 Warnings are emitted for each defaulted value.
 
@@ -117,8 +115,8 @@ Browser                          Server
    |  (user approves biometric/PIN) |
    |                                |
    |  POST /auth/passkey/register/finish
-   |  ---> flow_id + credential --->|  (verify attestation, store credential)
-   |  <--- access + refresh tokens  |
+   |  ---> flow_id + credential + device_public_key_jwk
+   |  <--- user_id + device_id -----|  (verify attestation, store credential, bind device)
 ```
 
 ### Login (username-less)
@@ -133,8 +131,8 @@ Browser                          Server
    |  (user selects passkey)        |
    |                                |
    |  POST /auth/passkey/login/finish
-   |  ---> flow_id + credential --->|  (verify assertion, update sign_count)
-   |  <--- access + refresh tokens  |
+   |  ---> flow_id + credential + device_public_key_jwk
+   |  <--- user_id + device_id -----|  (verify assertion, update sign_count, bind device)
 ```
 
 ### Adding a second passkey
@@ -142,8 +140,8 @@ Browser                          Server
 Authenticated users should add a second passkey early as a recovery mechanism.
 
 ```
-POST /auth/passkey/add/start   (with Bearer token)
-POST /auth/passkey/add/finish  (with Bearer token)
+POST /auth/passkey/add/start   (with device-signed Bearer JWT)
+POST /auth/passkey/add/finish  (with device-signed Bearer JWT)
 ```
 
 The `excludeCredentials` list prevents re-registering the same authenticator.
@@ -151,7 +149,7 @@ The `excludeCredentials` list prevents re-registering the same authenticator.
 ### Revocation
 
 ```
-POST /auth/passkeys/{key_id}/revoke  (with Bearer token)
+POST /auth/passkeys/{key_id}/revoke  (with device-signed Bearer JWT)
 ```
 
 Sets `revoked_at` on the credential. Blocked if it's the last active passkey.
@@ -193,8 +191,10 @@ H4CKATH0N_PASSWORD_AUTH_ENABLED=true
 When enabled, password routes (`/auth/register`, `/auth/login`,
 `/auth/password-reset/*`) are mounted alongside passkey routes.
 
-Password auth is **not** the default path and is intended for teams that need
-backward compatibility or have users who cannot use passkeys.
+Password auth is an **identity bootstrap method** only: it proves who the user
+is so a device key can be bound.  After binding, all API calls use the same
+device-signed ES256 JWT flow.  Password endpoints never return access tokens,
+refresh tokens, or session cookies.
 
 ## Database considerations
 

@@ -45,32 +45,6 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
-      "LogoutRequest": {
-        "properties": {
-          "refresh_token": {
-            "title": "Refresh Token",
-            "type": "string"
-          }
-        },
-        "required": [
-          "refresh_token"
-        ],
-        "title": "LogoutRequest",
-        "type": "object"
-      },
-      "MessageResponse": {
-        "properties": {
-          "message": {
-            "title": "Message",
-            "type": "string"
-          }
-        },
-        "required": [
-          "message"
-        ],
-        "title": "MessageResponse",
-        "type": "object"
-      },
       "PasskeyAddFinishRequest": {
         "properties": {
           "credential": {
@@ -374,42 +348,6 @@
         "title": "PingResponse",
         "type": "object"
       },
-      "RefreshRequest": {
-        "properties": {
-          "refresh_token": {
-            "title": "Refresh Token",
-            "type": "string"
-          }
-        },
-        "required": [
-          "refresh_token"
-        ],
-        "title": "RefreshRequest",
-        "type": "object"
-      },
-      "TokenResponse": {
-        "properties": {
-          "access_token": {
-            "title": "Access Token",
-            "type": "string"
-          },
-          "refresh_token": {
-            "title": "Refresh Token",
-            "type": "string"
-          },
-          "token_type": {
-            "default": "bearer",
-            "title": "Token Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "access_token",
-          "refresh_token"
-        ],
-        "title": "TokenResponse",
-        "type": "object"
-      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -479,47 +417,6 @@
           }
         },
         "summary": "Root"
-      }
-    },
-    "/auth/logout": {
-      "post": {
-        "operationId": "logout_auth_logout_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LogoutRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MessageResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Logout",
-        "tags": [
-          "auth"
-        ]
       }
     },
     "/auth/passkey/add/finish": {
@@ -787,50 +684,8 @@
         ]
       }
     },
-    "/auth/refresh": {
-      "post": {
-        "operationId": "refresh_auth_refresh_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TokenResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Refresh",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
     "/demo/echo": {
       "post": {
-        "description": "Echo back the message along with its reverse.",
         "operationId": "demo_echo_demo_echo_post",
         "requestBody": {
           "content": {
@@ -872,7 +727,6 @@
     },
     "/demo/ping": {
       "get": {
-        "description": "Simple liveness ping for the demo namespace.",
         "operationId": "demo_ping_demo_ping_get",
         "responses": {
           "200": {
@@ -910,7 +764,6 @@
     },
     "/healthz": {
       "get": {
-        "description": "Readiness check for E2E and deployment probes.",
         "operationId": "healthz_healthz_get",
         "responses": {
           "200": {

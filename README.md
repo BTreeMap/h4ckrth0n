@@ -8,7 +8,7 @@ Ship hackathon products fast, with secure-by-default auth, RBAC, Postgres readin
 
 - **API**: FastAPI app bootstrap with OpenAPI docs
 - **Auth**: passkey (WebAuthn) registration and login – no passwords required
-- **AuthZ**: built-in RBAC with `user` and `admin` roles, plus scoped permissions via JWT claims
+- **AuthZ**: built-in RBAC with `user` and `admin` roles, plus scoped permissions – all enforced server-side from the database
 - **Database**: SQLAlchemy 2.x + Alembic, works with SQLite (zero-config dev) and Postgres (recommended for production)
 - **LLM**: built-in LLM client wrapper (OpenAI SDK) with safe defaults and redaction hooks
 - **Observability**: opt-in LangSmith / OpenTelemetry tracing with trace ID propagation
@@ -65,10 +65,20 @@ h4ckath0n uses **passkeys (WebAuthn)** as the default authentication method. No 
 
 ### How it works
 
-1. **Register**: `POST /auth/passkey/register/start` → browser creates a passkey → `POST /auth/passkey/register/finish` → account created, tokens returned.
-2. **Login**: `POST /auth/passkey/login/start` → browser signs with passkey → `POST /auth/passkey/login/finish` → tokens returned. Username-less by default.
+1. **Register**: `POST /auth/passkey/register/start` → browser creates a passkey → `POST /auth/passkey/register/finish` → account created, device key bound.
+2. **Login**: `POST /auth/passkey/login/start` → browser signs with passkey → `POST /auth/passkey/login/finish` → user identified, device key bound. Username-less by default.
 3. **Add passkey**: authenticated users can add more passkeys via `POST /auth/passkey/add/start` + `POST /auth/passkey/add/finish`.
 4. **Revoke passkey**: `POST /auth/passkeys/{key_id}/revoke` – but **cannot revoke the last active passkey** (returns `LAST_PASSKEY` error).
+
+### Request authentication
+
+All API calls are authenticated via **device-signed ES256 JWTs**:
+
+- Each browser generates a non-extractable P-256 keypair stored in IndexedDB
+- The public key is registered with the backend during login/registration
+- The client mints short-lived JWTs (15 min) signed with the device private key
+- JWTs are held in memory only – never `localStorage`, `sessionStorage`, or cookies
+- The JWT contains **no privilege claims** (no role, no scopes) – authorization is computed server-side from the database
 
 ### ID scheme
 
@@ -101,7 +111,7 @@ def admin_dashboard(user=require_admin()):
     return {"ok": True}
 ```
 
-Scoped privileges (JWT claim `scopes`):
+Scoped privileges (checked from user's DB record):
 
 ```python
 from h4ckath0n.auth import require_scopes
@@ -118,27 +128,24 @@ h4ckath0n mounts these routes by default:
 ### Passkey (default)
 
 - `POST /auth/passkey/register/start` – begin passkey registration (creates account)
-- `POST /auth/passkey/register/finish` – complete registration (returns access + refresh tokens)
+- `POST /auth/passkey/register/finish` – complete registration (binds device key, returns user_id + device_id)
 - `POST /auth/passkey/login/start` – begin passkey login (username-less)
-- `POST /auth/passkey/login/finish` – complete login (returns access + refresh tokens)
+- `POST /auth/passkey/login/finish` – complete login (binds device key, returns user_id + device_id)
 - `POST /auth/passkey/add/start` – begin adding a passkey (authenticated)
 - `POST /auth/passkey/add/finish` – complete adding a passkey (authenticated)
 - `GET /auth/passkeys` – list current user's passkeys (authenticated)
 - `POST /auth/passkeys/{key_id}/revoke` – revoke a passkey (authenticated, blocked if last)
 
-### Token management
-
-- `POST /auth/refresh` – rotate refresh token, get new access token
-- `POST /auth/logout` – revoke refresh token
-
 ### Password auth (optional extra)
 
 Only available when `h4ckath0n[password]` is installed AND `H4CKATH0N_PASSWORD_AUTH_ENABLED=true`:
 
-- `POST /auth/register` – create account with email + password
-- `POST /auth/login` – authenticate with email + password
+- `POST /auth/register` – create account with email + password, bind device key
+- `POST /auth/login` – authenticate with email + password, bind device key
 - `POST /auth/password-reset/request` – request password reset
-- `POST /auth/password-reset/confirm` – confirm password reset
+- `POST /auth/password-reset/confirm` – confirm password reset, bind device key
+
+Password auth is an identity bootstrap method only. It proves who the user is so a device key can be bound. After binding, all API calls use device-signed ES256 JWTs. Password auth does **not** return access tokens, refresh tokens, or session cookies.
 
 ## Database
 
@@ -177,7 +184,6 @@ Everything is environment-driven (prefix `H4CKATH0N_`):
 |---|---|---|
 | `H4CKATH0N_ENV` | `development` | `development` or `production` |
 | `H4CKATH0N_DATABASE_URL` | `sqlite:///./h4ckath0n.db` | Database connection string |
-| `H4CKATH0N_AUTH_SIGNING_KEY` | *(ephemeral in dev)* | JWT signing key (**required in production**) |
 | `H4CKATH0N_RP_ID` | `localhost` *(dev only)* | WebAuthn relying party ID (**required in production**) |
 | `H4CKATH0N_ORIGIN` | `http://localhost:8000` *(dev only)* | WebAuthn expected origin (**required in production**) |
 | `H4CKATH0N_WEBAUTHN_TTL_SECONDS` | `300` | Challenge expiry time (seconds) |
@@ -188,8 +194,8 @@ Everything is environment-driven (prefix `H4CKATH0N_`):
 | `H4CKATH0N_FIRST_USER_IS_ADMIN` | `false` | First registered user becomes admin (dev convenience) |
 | `OPENAI_API_KEY` | — | OpenAI API key for the LLM module |
 
-In development mode, missing signing keys and WebAuthn settings generate ephemeral/localhost defaults with warnings.
-In production mode, missing critical secrets and `RP_ID`/`ORIGIN` cause a hard error.
+In development mode, missing WebAuthn settings generate localhost defaults with warnings.
+In production mode, missing `RP_ID` and `ORIGIN` cause a hard error.
 
 ## Observability (opt-in)
 
