@@ -9,13 +9,14 @@ It is designed to be “import a few lines and ship”, with:
 - PostgreSQL support available immediately (driver included by default)
 - LLM tooling included by default (safe defaults and guardrails)
 - typed, tested, documented public APIs
+- a full-stack scaffold CLI (npm) for a working app template (api + web)
 
 ## Product principles
 
 1) Ship fast, safely:
 
 - the default path should be the safe path
-- “pit of success” for auth and RBAC
+- “pit of success” for auth and authorization
 
 1) Opinionated defaults, but composable:
 
@@ -39,9 +40,10 @@ It is designed to be “import a few lines and ship”, with:
 - Web/API: FastAPI (ASGI), automatic OpenAPI
 - DB: SQLAlchemy 2.x + Alembic
 - PostgreSQL driver: Psycopg 3 (binary extra used for fast install in hackathon contexts)
-- Auth: Passkeys (WebAuthn) via py_webauthn – default, no passwords required
-- Auth (optional): Argon2id password hashing via `h4ckath0n[password]` extra
-- JWT: PyJWT with access tokens, refresh tokens (revocable)
+- Auth (user): Passkeys (WebAuthn) via py_webauthn (default, no passwords required)
+- Auth (device): browser/device identity keypair (P-256, non-extractable) stored in IndexedDB
+- Request auth: client-minted short-lived JWTs signed with the device key (ES256)
+- Auth (optional): Argon2id password hashing via `h4ckath0n[password]` extra (only when explicitly enabled)
 - Settings: environment-based configuration (pydantic-settings)
 - LLM: OpenAI Python SDK included by default, plus a small abstraction layer and redaction hooks
 - Redis: OPTIONAL (extra), for background queues or caching
@@ -59,6 +61,11 @@ Notes:
 - `docs/` docs and decisions
 - `packages/create-h4ckath0n/` npm CLI package for scaffolding full-stack projects
 - `packages/create-h4ckath0n/templates/fullstack/` embedded project templates (api + web)
+
+## Source-of-truth security docs
+
+- `docs/security/frontend.md` is the source of truth for the frontend/device-key auth design.
+- Documentation must never describe legacy “server-minted access + refresh token” flows unless explicitly reintroduced.
 
 ## Setup commands (uv)
 
@@ -89,6 +96,11 @@ Frontend (run from `packages/create-h4ckath0n/templates/fullstack/web/`):
 - `npm test`
 - `npm run build`
 
+E2E (Playwright, run from `packages/create-h4ckath0n/templates/fullstack/web/`):
+
+- Must pass in CI and is a required local quality guard for agents.
+- Agents must run E2E locally before submitting work that touches auth, passkeys, device auth, or OpenAPI/type generation.
+
 ## Release channels
 
 - **dev** (pushes to main): base `X.Y.(Z+1)`, npm `X.Y.(Z+1)-dev.YYYY-MM-DD.HH-MM-SS.<sha7>`, PyPI `X.Y.(Z+1).devYYYYMMDDHHMMSS`, dist-tag `dev`.
@@ -102,24 +114,51 @@ npm Trusted Publisher must reference workflow `publish.yml` and environment `npm
 
 ### AuthN + AuthZ model
 
-- Default auth: passkeys (WebAuthn) via py_webauthn
-- Password auth: optional extra (`h4ckath0n[password]`), off by default
-- Built-in roles: `user`, `admin`
-- JWT claims include:
-  - `sub` (user id)
-  - `role` (string)
-  - `scopes` (list of strings)
-  - `iat`, `exp`, and optionally `aud`, `iss`
+#### User authentication (passkeys)
+
+- Default auth: passkeys (WebAuthn) via py_webauthn.
+- Password auth is optional (`h4ckath0n[password]`) and should remain OFF by default.
+
+#### Device authentication (client-signed ES256 JWT)
+
+Each browser/device maintains a long-lived device identity key:
+
+- Private key: generated via WebCrypto as non-extractable and stored in IndexedDB (via idb-keyval).
+- Public key: exported as JWK and registered with the backend.
+- Device IDs use the `d...` prefix and are stored server-side bound to a user (`u...`).
+
+For API calls, the web client mints short-lived JWTs signed by the device private key (ES256):
+
+- JWT header includes `kid` set to the device id (`d...`).
+- JWT payload includes only identity and time claims (`sub`, `iat`, `exp`), plus optional `aud` and `jti`.
+- The JWT contains NO privilege claims: no role, no scopes, no permissions.
+- Authorization is computed server-side by loading the user record and enforcing policy from the database.
+
+Server verification flow:
+
+1) Extract `Authorization: Bearer <jwt>`.
+2) Read `kid` from JWT header, load device public key from DB.
+3) Verify signature (ES256) and time claims.
+4) Confirm device is not revoked.
+5) Load user bound to the device.
+6) Enforce authorization based on DB state, not JWT claims.
+
+#### Authorization model
+
+- Built-in roles: `user`, `admin` (stored server-side).
+- Future “user-defined roles” (if added) must also be stored server-side and enforced by server-side policy.
 - Endpoint protection should be easy:
   - decorators or FastAPI dependencies
   - helpers like `require_user()`, `require_admin()`, `require_scopes([...])`
+- These helpers must not rely on JWT privilege claims (the client token has none).
 
 ### ID scheme
 
 - All primary IDs use a 32-character base32 scheme from 20 random bytes
 - User IDs: first character forced to `u` (e.g., `u3mfgh7k2n4p5q6r7s8t9v0w1x2y3z4a`)
 - Internal credential key IDs: first character forced to `k`
-- Helpers: `new_user_id()`, `new_key_id()`, `is_user_id()`, `is_key_id()`
+- Device IDs: first character forced to `d`
+- Helpers: `new_user_id()`, `new_key_id()`, `new_device_id()`, `is_user_id()`, `is_key_id()`, `is_device_id()`
 - Never use email as user ID
 - WebAuthn credential_id from browser is stored separately (base64url), not as the internal key ID
 
@@ -132,7 +171,7 @@ npm Trusted Publisher must reference workflow `publish.yml` and environment `npm
 
 ### WebAuthn challenges
 
-- Challenge state stored server-side in `webauthn_challenges` table
+- Challenge state stored server-side (table: `webauthn_challenges`)
 - Default TTL: 300 seconds (configurable via `H4CKATH0N_WEBAUTHN_TTL_SECONDS`)
 - Challenges are single-use (consumed on successful finish)
 - Expired challenges can be cleaned up via `cleanup_expired_challenges()`
@@ -140,15 +179,7 @@ npm Trusted Publisher must reference workflow `publish.yml` and environment `npm
 ### Secure defaults
 
 - Never log secrets, tokens, Authorization headers, WebAuthn assertions, or attestation objects.
-- Password reset tokens (password extra only):
-  - random, high-entropy
-  - stored hashed
-  - time-limited
-  - single-use (or revocable)
-- Refresh tokens:
-  - stored server-side
-  - rotated on use
-  - revocable (logout revokes)
+- Tokens are short-lived and minted client-side; do not persist tokens to localStorage/sessionStorage.
 - WebAuthn challenges:
   - stored server-side, single-use, time-limited (default 5 min)
   - origin and rpId validated strictly in production
@@ -161,6 +192,28 @@ npm Trusted Publisher must reference workflow `publish.yml` and environment `npm
 - No connection leaks. Sessions must close reliably.
 - Avoid blocking network calls in the request path unless explicitly documented.
 - Provide a small LLM client wrapper that supports timeouts and retries, with sensible defaults.
+
+## OpenAPI and frontend type alignment (must stay in sync)
+
+Goal: avoid hand-maintained duplicated types across api and web.
+
+Required artifacts (checked into git):
+
+- `packages/create-h4ckath0n/templates/fullstack/api/openapi.json`
+- `packages/create-h4ckath0n/templates/fullstack/web/src/api/openapi.ts`
+
+Rules:
+
+- `openapi.json` must be regenerated when backend API changes.
+- `openapi.ts` must be regenerated from `openapi.json` using the pinned generator installed in the web template.
+- Generator drift is expected and is pinned by the web template’s `package-lock.json` (generator resolved from local `node_modules`).
+- Do not call `npx` inside Node.js source files.
+- Use `npm exec --no -- ...` when invoking Node-based generators from scripts/CI to ensure pinned versions and avoid implicit installs.
+
+The generated types must be demonstrated as usable:
+
+- At least one web template file must import types from `src/api/openapi.ts` and use them in the API client layer (not just in tests).
+- The web template must typecheck against the generated types in normal dev and CI paths.
 
 ## Observability (killer feature)
 
@@ -241,19 +294,28 @@ When `uv sync --upgrade` changes `uv.lock`, include those changes in the PR with
 - Use pytest.
 - Provide integration-style tests (SQLite) that cover:
   - passkey registration/login flow state
+  - WebAuthn challenge TTL and single-use behavior
   - ID generators (length, prefix, charset)
   - last-passkey invariant (cannot revoke last active passkey)
-  - protected endpoint access with role and scopes
-  - refresh rotation
+  - device registration and revocation
+  - token verification behavior:
+    - `kid` lookup, signature verification (ES256), exp/iat checks, aud separation (http vs ws)
+  - protected endpoint access based on server-side DB authorization
   - password auth lifecycle (when password extra enabled)
 - Any bug fix must include a regression test.
+
+E2E (Playwright) should cover:
+
+- passkey registration and login flows in the scaffolded web + api
+- device key registration and device-signed requests
+- passkey management UI for listing and last-passkey revoke block
+- OpenAPI type generation being usable in the web app (smoke coverage)
 
 ## Docs expectations
 
 - README quickstart must be runnable and minimal.
-- Provide at least one runnable example under `examples/`:
-  - SQLite quickstart (zero-config)
-  - Postgres variant (config-only, no dependency change)
+- Docs must not mention refresh tokens or server-minted access tokens unless that functionality is intentionally reintroduced.
+- Keep `docs/security/frontend.md` aligned with implementation.
 
 ## Commit hygiene for agents
 
@@ -278,58 +340,19 @@ If a design choice is non-obvious, add a short note under `docs/decisions/`.
 
 When modifying files under `packages/create-h4ckath0n/templates/fullstack/web/`, run from that directory:
 
-- `npm run gen` (regenerate OpenAPI types – requires uv + backend deps)
 - `npm run lint` (ESLint)
 - `npm run typecheck` (tsc --noEmit)
 - `npm run test` (Vitest)
 - `npm run build` (production build)
 
-After running `npm run gen`, verify there is no unexpected git diff:
-
-- `git diff --exit-code`
-
 Do not commit frontend template changes that fail these checks.
 
-### OpenAPI type generation (mandatory quality gate)
+### E2E quality guard (required)
 
-The fullstack template uses an **OpenAPI → TypeScript** pipeline to keep the frontend type-safe against the backend schema. Generated artifacts are **checked into git** and CI enforces they are up to date.
+When modifying auth, passkeys, device auth, scaffolding, or OpenAPI/type generation:
 
-**Generated files (checked in):**
-
-- `packages/create-h4ckath0n/templates/fullstack/api/openapi.json` – canonical OpenAPI spec
-- `packages/create-h4ckath0n/templates/fullstack/web/src/gen/openapi.ts` – TypeScript types generated by `openapi-typescript`
-
-**Canonical commands (run from the web template directory):**
-
-```bash
-cd packages/create-h4ckath0n/templates/fullstack/web
-npm run gen          # dumps backend OpenAPI JSON → generates TS types
-git diff --exit-code # must show no changes; if it does, commit the updates
-```
-
-**Rules for agents:**
-
-- Never reintroduce hand-written duplicate API types when `openapi-typescript` already provides them via `src/gen/openapi.ts`.
-- When backend routes or Pydantic models change, regenerate types (`npm run gen`) and update any dependent frontend code.
-- The generator (`openapi-typescript`) must be installed locally in `web/package.json` and pinned by `web/package-lock.json`. Do **not** use `npx`; use `npm exec --no -- <bin> <args>`.
-- The typed API client lives at `src/api/client.ts` (built on `openapi-fetch`). Use it for all new API calls.
-- Type assertions in `src/api/types.ts` catch schema drift at compile time—keep them in sync when paths change.
-
-### Playwright E2E quality gate
-
-The E2E tests must be run locally as a quality gate before finishing any change to the fullstack template:
-
-```bash
-cd packages/create-h4ckath0n/templates/fullstack/web
-npm run gen                              # ensure types are current
-npx playwright install --with-deps chromium
-npx playwright test
-```
-
-The E2E suite validates:
-- Passkey registration / login / add / revoke flows
-- Library-supplied endpoint usage (GET /auth/passkeys via typed client)
-- User-defined demo endpoints (GET /demo/ping, POST /demo/echo)
+- Run Playwright E2E locally and ensure it passes.
+- Ensure the CI `e2e` job also passes.
 
 ### Scaffold CLI checks
 
@@ -337,3 +360,4 @@ When modifying `packages/create-h4ckath0n/bin/` or `packages/create-h4ckath0n/li
 
 - Run `node packages/create-h4ckath0n/bin/cli.js --help` to verify CLI syntax.
 - Test scaffold output with `node packages/create-h4ckath0n/bin/cli.js test-project --no-install --no-git` in a temp directory.
+- Ensure the scaffolded project can run web/api checks and E2E.
