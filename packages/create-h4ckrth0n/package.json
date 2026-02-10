@@ -12,8 +12,28 @@
     "lib/",
     "templates/"
   ],
-  "keywords": ["hackathon", "fullstack", "passkeys", "webauthn", "react", "fastapi"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BTreeMap/h4ckrth0n.git",
+    "directory": "packages/create-h4ckrth0n"
+  },
+  "homepage": "https://github.com/BTreeMap/h4ckrth0n",
+  "bugs": {
+    "url": "https://github.com/BTreeMap/h4ckrth0n/issues"
+  },
+  "keywords": [
+    "hackathon",
+    "fullstack",
+    "passkeys",
+    "webauthn",
+    "react",
+    "fastapi"
+  ],
   "engines": {
     "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }
