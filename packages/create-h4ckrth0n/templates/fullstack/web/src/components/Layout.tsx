@@ -1,54 +1,86 @@
 import { Outlet, Link } from "react-router";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth";
+import { Sun, Moon, Shield, LogOut, LayoutDashboard, Settings } from "lucide-react";
+import { useState, useEffect } from "react";
 
 export function Layout() {
-  const { user, logout } = useAuth();
+  const { isAuthenticated, logout, displayName } = useAuth();
+  const [dark, setDark] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return document.documentElement.getAttribute("data-theme") === "dark" ||
+      (!document.documentElement.getAttribute("data-theme") &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches);
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  }, [dark]);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b border-border bg-surface">
-        <nav className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <Link to="/" className="text-lg font-bold text-primary">
-            h4ckrth0n
-          </Link>
-          <div className="flex items-center gap-4">
-            {user ? (
-              <>
-                <Link to="/dashboard" className="text-sm text-text-muted hover:text-text">
-                  Dashboard
-                </Link>
-                <Link to="/settings" className="text-sm text-text-muted hover:text-text">
-                  Settings
-                </Link>
-                {user.role === "admin" && (
-                  <Link to="/admin" className="text-sm text-text-muted hover:text-text">
-                    Admin
+    <div className="min-h-screen bg-surface">
+      <nav className="border-b border-border bg-surface/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Link to="/" className="flex items-center gap-2 font-bold text-lg text-text">
+              <Shield className="w-5 h-5 text-primary" />
+              <span>{"{{PROJECT_NAME}}"}</span>
+            </Link>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setDark(!dark)}
+                className="p-2 rounded-xl hover:bg-surface-alt transition-colors"
+                aria-label="Toggle dark mode"
+              >
+                {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+
+              {isAuthenticated ? (
+                <>
+                  <Link
+                    to="/dashboard"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-xl hover:bg-surface-alt transition-colors"
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    Dashboard
                   </Link>
-                )}
-                <button
-                  onClick={() => void logout()}
-                  className="text-sm text-danger hover:text-danger-hover"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link to="/login" className="text-sm text-text-muted hover:text-text">
-                  Login
-                </Link>
-                <Link
-                  to="/register"
-                  className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover"
-                >
-                  Register
-                </Link>
-              </>
-            )}
+                  <Link
+                    to="/settings"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-xl hover:bg-surface-alt transition-colors"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Settings
+                  </Link>
+                  <button
+                    onClick={() => void logout()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-xl hover:bg-surface-alt transition-colors text-danger"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    {displayName || "Logout"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="px-3 py-1.5 text-sm rounded-xl hover:bg-surface-alt transition-colors"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="px-4 py-1.5 text-sm bg-primary text-white rounded-xl hover:bg-primary-hover transition-colors"
+                  >
+                    Register
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
-        </nav>
-      </header>
-      <main className="flex-1">
+        </div>
+      </nav>
+
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Outlet />
       </main>
     </div>

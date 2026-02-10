@@ -1,14 +1,27 @@
 import { useState } from "react";
-import { useAuth } from "../auth/AuthContext";
+import { Link } from "react-router";
+import { Fingerprint, LogIn } from "lucide-react";
+import { useAuth } from "../auth";
+import { Card, CardContent, CardHeader } from "../components/Card";
+import { Button } from "../components/Button";
+import { Alert } from "../components/Alert";
 
 export function Login() {
-  const { login } = useAuth();
-  const [error, setError] = useState<string | null>(null);
+  const { login, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function handleLogin() {
-    setError(null);
+  if (isAuthenticated) {
+    return (
+      <div className="max-w-md mx-auto py-16 text-center">
+        <Alert variant="info">You are already logged in.</Alert>
+      </div>
+    );
+  }
+
+  const handleLogin = async () => {
     setLoading(true);
+    setError(null);
     try {
       await login();
     } catch (err) {
@@ -16,24 +29,38 @@ export function Login() {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="mx-auto max-w-sm px-4 py-16">
-      <h1 className="text-2xl font-bold">Sign in</h1>
-      <p className="mt-2 text-sm text-text-muted">
-        Authenticate with your passkey.
-      </p>
-      {error && (
-        <p className="mt-4 rounded-md bg-danger/10 p-3 text-sm text-danger">{error}</p>
-      )}
-      <button
-        onClick={() => void handleLogin()}
-        disabled={loading}
-        className="mt-6 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
-      >
-        {loading ? "Signing in…" : "Sign in with passkey"}
-      </button>
+    <div className="max-w-md mx-auto py-16">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-xl">
+              <LogIn className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-text">Welcome Back</h2>
+              <p className="text-sm text-text-muted">Login with your passkey</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {error && <Alert variant="error">{error}</Alert>}
+
+          <Button onClick={handleLogin} disabled={loading} className="w-full">
+            <Fingerprint className="w-4 h-4" />
+            {loading ? "Authenticating..." : "Login with Passkey"}
+          </Button>
+
+          <p className="text-center text-sm text-text-muted">
+            No account?{" "}
+            <Link to="/register" className="text-primary hover:underline">
+              Register
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
