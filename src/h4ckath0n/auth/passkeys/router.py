@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from h4ckath0n.auth.dependencies import _get_current_user
-from h4ckath0n.auth.jwt import create_access_token
-from h4ckath0n.auth.models import User
+from h4ckath0n.auth.models import Device, User
 from h4ckath0n.auth.passkeys import schemas
 from h4ckath0n.auth.passkeys.service import (
     LastPasskeyError,
@@ -20,7 +21,6 @@ from h4ckath0n.auth.passkeys.service import (
     start_authentication,
     start_registration,
 )
-from h4ckath0n.auth.service import create_refresh_token
 
 router = APIRouter(prefix="/auth/passkey", tags=["passkey"])
 
@@ -38,20 +38,24 @@ def _db_dep(request: Request):  # type: ignore[no-untyped-def]
         db.close()
 
 
-def _tokens(user: User, request: Request, db: Session) -> dict:
-    """Issue access + refresh tokens for *user*."""
-    settings = request.app.state.settings
-    scopes = [s for s in user.scopes.split(",") if s]
-    access = create_access_token(
-        user_id=user.id,
-        role=user.role,
-        scopes=scopes,
-        signing_key=settings.effective_signing_key(),
-        algorithm=settings.auth_algorithm,
-        expire_minutes=settings.access_token_expire_minutes,
+def _register_device(
+    db: Session,
+    user_id: str,
+    public_key_jwk: dict | None,
+    label: str | None,
+) -> str:
+    """Create a Device record and return its id, or empty string if no key."""
+    if not public_key_jwk:
+        return ""
+    device = Device(
+        user_id=user_id,
+        public_key_jwk=json.dumps(public_key_jwk),
+        label=label,
     )
-    refresh = create_refresh_token(db, user.id, expire_days=settings.refresh_token_expire_days)
-    return {"access_token": access, "refresh_token": refresh, "token_type": "bearer"}
+    db.add(device)
+    db.commit()
+    db.refresh(device)
+    return device.id
 
 
 # ---------------------------------------------------------------------------
@@ -66,7 +70,11 @@ def register_start(request: Request, db: Session = Depends(_db_dep)):
     return schemas.PasskeyRegisterStartResponse(flow_id=flow_id, options=options)
 
 
-@router.post("/register/finish", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register/finish",
+    response_model=schemas.PasskeyFinishResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def register_finish(
     body: schemas.PasskeyRegisterFinishRequest,
     request: Request,
@@ -77,7 +85,10 @@ def register_finish(
         user = finish_registration(db, body.flow_id, body.credential, settings)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
-    return _tokens(user, request, db)
+
+    device_id = _register_device(db, user.id, body.device_public_key_jwk, body.device_label)
+
+    return schemas.PasskeyFinishResponse(user_id=user.id, device_id=device_id, role=user.role)
 
 
 # ---------------------------------------------------------------------------
@@ -92,7 +103,7 @@ def login_start(request: Request, db: Session = Depends(_db_dep)):
     return schemas.PasskeyLoginStartResponse(flow_id=flow_id, options=options)
 
 
-@router.post("/login/finish")
+@router.post("/login/finish", response_model=schemas.PasskeyFinishResponse)
 def login_finish(
     body: schemas.PasskeyLoginFinishRequest,
     request: Request,
@@ -103,7 +114,10 @@ def login_finish(
         user = finish_authentication(db, body.flow_id, body.credential, settings)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from None
-    return _tokens(user, request, db)
+
+    device_id = _register_device(db, user.id, body.device_public_key_jwk, body.device_label)
+
+    return schemas.PasskeyFinishResponse(user_id=user.id, device_id=device_id, role=user.role)
 
 
 # ---------------------------------------------------------------------------
@@ -131,10 +145,13 @@ def add_finish(
 ):
     settings = request.app.state.settings
     try:
-        cred = finish_add_credential(db, body.flow_id, body.credential, user, settings)
+        finish_add_credential(db, body.flow_id, body.credential, user, settings)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
-    return {"id": cred.id, "created_at": cred.created_at.isoformat()}
+
+    device_id = _register_device(db, user.id, body.device_public_key_jwk, body.device_label)
+
+    return schemas.PasskeyFinishResponse(user_id=user.id, device_id=device_id, role=user.role)
 
 
 # ---------------------------------------------------------------------------
@@ -154,7 +171,7 @@ def passkeys_list(
     items = [
         schemas.PasskeyInfo(
             id=c.id,
-            nickname=c.nickname,
+            label=c.nickname,
             created_at=c.created_at,
             last_used_at=c.last_used_at,
             revoked_at=c.revoked_at,

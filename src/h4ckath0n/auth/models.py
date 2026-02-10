@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from sqlalchemy import Boolean, DateTime, Index, LargeBinary, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from h4ckath0n.auth.passkeys.ids import new_key_id, new_token_id, new_user_id
+from h4ckath0n.auth.passkeys.ids import new_device_id, new_key_id, new_token_id, new_user_id
 from h4ckath0n.db.base import Base
 
 
@@ -114,4 +114,19 @@ class PasswordResetToken(Base):
     token_hash: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     used: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+# ---------------------------------------------------------------------------
+# Device  (stores device public keys for ES256 JWT verification)
+# ---------------------------------------------------------------------------
+
+
+class Device(Base):
+    __tablename__ = "devices"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_device_id)
+    user_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    public_key_jwk: Mapped[str] = mapped_column(Text, nullable=False)  # JSON-serialized JWK
+    label: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
