@@ -1,5 +1,8 @@
 import { defineConfig } from "@playwright/test";
-import { resolve } from "node:path";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // In CI the h4ckath0n library is installed from the repo root.
 // Locally, the same `uv run` from repo root makes the library available.
@@ -32,6 +35,9 @@ export default defineConfig({
       url: "http://127.0.0.1:8000/healthz",
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
+      env: {
+        PYTHONPATH: apiDir,
+      },
     },
     {
       command: "npx vite --host 127.0.0.1 --port 5173",

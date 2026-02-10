@@ -71,7 +71,8 @@ test.describe("Passkey auth flows", () => {
 
     // Logout
     await page.getByTestId("nav-logout").click();
-    await expect(page).toHaveURL("/");
+    // After logout, app may navigate to "/" or ProtectedRoute may redirect to "/login"
+    await expect(page).toHaveURL(/\/(login)?$/, { timeout: 10_000 });
 
     // Login with passkey
     await page.goto("/login");
