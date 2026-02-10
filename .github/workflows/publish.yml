@@ -315,7 +315,6 @@ jobs:
       H4CKATH0N_DATABASE_URL: "sqlite:///./e2e-test.db"
       H4CKATH0N_RP_ID: "localhost"
       H4CKATH0N_ORIGIN: "http://localhost:5173"
-      H4CKATH0N_AUTH_SIGNING_KEY: "e2e-ci-test-key-not-for-production"
 
     steps:
       - name: Set up Node
