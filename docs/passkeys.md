@@ -1,6 +1,6 @@
 # Passkeys (WebAuthn) – Architecture and Deployment Guide
 
-h4ckrth0n uses **passkeys** (WebAuthn / FIDO2) as the default authentication
+h4ckath0n uses **passkeys** (WebAuthn / FIDO2) as the default authentication
 method. This document covers the threat model, invariants, deployment settings,
 and recovery guidance.
 
@@ -20,7 +20,7 @@ and recovery guidance.
 
 - **Authenticator** (hardware key, platform biometric): stores private key material.
 - **Browser**: mediates WebAuthn API calls, enforces origin checks.
-- **Server** (h4ckrth0n): stores public keys, validates attestation/assertion,
+- **Server** (h4ckath0n): stores public keys, validates attestation/assertion,
   issues JWT tokens.
 
 ### What passkeys do NOT protect against
@@ -56,7 +56,7 @@ from both succeeding.
 | Property | Value |
 |---|---|
 | Storage | Server-side (`webauthn_challenges` table) |
-| TTL | Default 300 seconds (`H4CKRTH0N_WEBAUTHN_TTL_SECONDS`) |
+| TTL | Default 300 seconds (`H4CKATH0N_WEBAUTHN_TTL_SECONDS`) |
 | Single-use | `consumed_at` set on successful finish; replays rejected |
 | Cleanup | `cleanup_expired_challenges()` deletes expired rows |
 
@@ -79,14 +79,14 @@ exposing cryptographic material.
 
 | Variable | Example | Description |
 |---|---|---|
-| `H4CKRTH0N_RP_ID` | `example.com` | WebAuthn relying party ID (typically the domain) |
-| `H4CKRTH0N_ORIGIN` | `https://example.com` | Expected origin (scheme + host + optional port) |
-| `H4CKRTH0N_AUTH_SIGNING_KEY` | *(secret)* | JWT signing key |
-| `H4CKRTH0N_ENV` | `production` | Enables strict validation |
+| `H4CKATH0N_RP_ID` | `example.com` | WebAuthn relying party ID (typically the domain) |
+| `H4CKATH0N_ORIGIN` | `https://example.com` | Expected origin (scheme + host + optional port) |
+| `H4CKATH0N_AUTH_SIGNING_KEY` | *(secret)* | JWT signing key |
+| `H4CKATH0N_ENV` | `production` | Enables strict validation |
 
 ### Development defaults
 
-In `development` mode (default), h4ckrth0n uses safe localhost defaults:
+In `development` mode (default), h4ckath0n uses safe localhost defaults:
 
 - `rp_id`: `localhost`
 - `origin`: `http://localhost:8000`
@@ -98,10 +98,10 @@ Warnings are emitted for each defaulted value.
 
 | Variable | Default | Description |
 |---|---|---|
-| `H4CKRTH0N_WEBAUTHN_TTL_SECONDS` | `300` | Challenge expiry (seconds) |
-| `H4CKRTH0N_USER_VERIFICATION` | `preferred` | WebAuthn UV requirement |
-| `H4CKRTH0N_ATTESTATION` | `none` | Attestation conveyance preference |
-| `H4CKRTH0N_PASSWORD_AUTH_ENABLED` | `false` | Enable password routes (requires `[password]` extra) |
+| `H4CKATH0N_WEBAUTHN_TTL_SECONDS` | `300` | Challenge expiry (seconds) |
+| `H4CKATH0N_USER_VERIFICATION` | `preferred` | WebAuthn UV requirement |
+| `H4CKATH0N_ATTESTATION` | `none` | Attestation conveyance preference |
+| `H4CKATH0N_PASSWORD_AUTH_ENABLED` | `false` | Enable password routes (requires `[password]` extra) |
 
 ## Credential lifecycle
 
@@ -168,7 +168,7 @@ Sets `revoked_at` on the credential. Blocked if it's the last active passkey.
 
 Without any active passkeys, the user cannot log in. Recovery options:
 
-1. **If email extra is enabled** (`h4ckrth0n[email]`): admin-initiated recovery
+1. **If email extra is enabled** (`h4ckath0n[email]`): admin-initiated recovery
    flow that verifies email ownership and allows registering a new passkey.
 2. **Admin intervention**: an admin can create a recovery flow for the user.
 3. **Out-of-band verification**: identity verification + admin provisioning.
@@ -181,13 +181,13 @@ social engineering attacks.
 Password auth is available as an optional extra:
 
 ```bash
-pip install "h4ckrth0n[password]"
+pip install "h4ckath0n[password]"
 ```
 
 And must be explicitly enabled:
 
 ```
-H4CKRTH0N_PASSWORD_AUTH_ENABLED=true
+H4CKATH0N_PASSWORD_AUTH_ENABLED=true
 ```
 
 When enabled, password routes (`/auth/register`, `/auth/login`,
@@ -215,7 +215,7 @@ startup hook.
 ### Postgres recommendations
 
 - Use `postgresql+psycopg://` connection string (psycopg 3 binary included).
-- Ensure `H4CKRTH0N_RP_ID` and `H4CKRTH0N_ORIGIN` are set for production.
+- Ensure `H4CKATH0N_RP_ID` and `H4CKATH0N_ORIGIN` are set for production.
 - The `SELECT ... FOR UPDATE` locking for the last-passkey invariant requires
   a proper transaction-capable database (Postgres). SQLite works for
   development but does not support row-level locking.

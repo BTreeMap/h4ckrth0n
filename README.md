@@ -1,8 +1,8 @@
-# h4ckrth0n
+# h4ckath0n
 
 Ship hackathon products fast, with secure-by-default auth, RBAC, Postgres readiness, and built-in LLM tooling.
 
-**h4ckrth0n** is an opinionated Python library that makes it hard to accidentally ship insecure glue code during a hackathon.
+**h4ckath0n** is an opinionated Python library that makes it hard to accidentally ship insecure glue code during a hackathon.
 
 ## What you get by default
 
@@ -21,26 +21,32 @@ Password auth and Redis-based queues/caching are available as optional extras.
 ### Recommended (uv)
 
 ```bash
-uv add h4ckrth0n
+uv add h4ckath0n
 ```
 
 Optional extras:
 
 ```bash
-uv add "h4ckrth0n[password]"  # Argon2-based password auth (off by default)
-uv add "h4ckrth0n[redis]"     # Redis support
+uv add "h4ckath0n[password]"  # Argon2-based password auth (off by default)
+uv add "h4ckath0n[redis]"     # Redis support
 ```
 
 ### pip
 
 ```bash
-pip install h4ckrth0n
+pip install h4ckath0n
+```
+
+## Scaffold a full-stack project
+
+```bash
+npx h4ckath0n my-app
 ```
 
 ## Quickstart
 
 ```python
-from h4ckrth0n import create_app
+from h4ckath0n import create_app
 
 app = create_app()
 ```
@@ -55,7 +61,7 @@ Open docs at `/docs` (Swagger UI). Passkey auth routes are mounted automatically
 
 ## Auth: passkeys by default
 
-h4ckrth0n uses **passkeys (WebAuthn)** as the default authentication method. No passwords, no email required.
+h4ckath0n uses **passkeys (WebAuthn)** as the default authentication method. No passwords, no email required.
 
 ### How it works
 
@@ -75,8 +81,8 @@ h4ckrth0n uses **passkeys (WebAuthn)** as the default authentication method. No 
 Protect an endpoint (requires a logged-in user):
 
 ```python
-from h4ckrth0n import create_app
-from h4ckrth0n.auth import require_user
+from h4ckath0n import create_app
+from h4ckath0n.auth import require_user
 
 app = create_app()
 
@@ -88,7 +94,7 @@ def me(user=require_user()):
 Admin-only endpoint:
 
 ```python
-from h4ckrth0n.auth import require_admin
+from h4ckath0n.auth import require_admin
 
 @app.get("/admin/dashboard")
 def admin_dashboard(user=require_admin()):
@@ -98,7 +104,7 @@ def admin_dashboard(user=require_admin()):
 Scoped privileges (JWT claim `scopes`):
 
 ```python
-from h4ckrth0n.auth import require_scopes
+from h4ckath0n.auth import require_scopes
 
 @app.post("/billing/refund")
 def refund(user=require_scopes("billing:refund")):
@@ -107,7 +113,7 @@ def refund(user=require_scopes("billing:refund")):
 
 ## Auth routes
 
-h4ckrth0n mounts these routes by default:
+h4ckath0n mounts these routes by default:
 
 ### Passkey (default)
 
@@ -127,7 +133,7 @@ h4ckrth0n mounts these routes by default:
 
 ### Password auth (optional extra)
 
-Only available when `h4ckrth0n[password]` is installed AND `H4CKRTH0N_PASSWORD_AUTH_ENABLED=true`:
+Only available when `h4ckath0n[password]` is installed AND `H4CKATH0N_PASSWORD_AUTH_ENABLED=true`:
 
 - `POST /auth/register` – create account with email + password
 - `POST /auth/login` – authenticate with email + password
@@ -141,17 +147,17 @@ Zero-config default: SQLite is used if no database URL is provided.
 To use Postgres (recommended for production):
 
 ```
-H4CKRTH0N_DATABASE_URL=postgresql+psycopg://user:pass@host:5432/dbname
+H4CKATH0N_DATABASE_URL=postgresql+psycopg://user:pass@host:5432/dbname
 ```
 
 The `psycopg[binary]` driver is included by default – no extra install needed.
 
 ## LLM
 
-h4ckrth0n includes LLM tooling by default. Set `OPENAI_API_KEY` and use:
+h4ckath0n includes LLM tooling by default. Set `OPENAI_API_KEY` and use:
 
 ```python
-from h4ckrth0n.llm import llm
+from h4ckath0n.llm import llm
 
 client = llm()
 resp = client.chat(
@@ -165,21 +171,21 @@ Fails gracefully with a clear error message when `OPENAI_API_KEY` is not set.
 
 ## Configuration
 
-Everything is environment-driven (prefix `H4CKRTH0N_`):
+Everything is environment-driven (prefix `H4CKATH0N_`):
 
 | Variable | Default | Description |
 |---|---|---|
-| `H4CKRTH0N_ENV` | `development` | `development` or `production` |
-| `H4CKRTH0N_DATABASE_URL` | `sqlite:///./h4ckrth0n.db` | Database connection string |
-| `H4CKRTH0N_AUTH_SIGNING_KEY` | *(ephemeral in dev)* | JWT signing key (**required in production**) |
-| `H4CKRTH0N_RP_ID` | `localhost` *(dev only)* | WebAuthn relying party ID (**required in production**) |
-| `H4CKRTH0N_ORIGIN` | `http://localhost:8000` *(dev only)* | WebAuthn expected origin (**required in production**) |
-| `H4CKRTH0N_WEBAUTHN_TTL_SECONDS` | `300` | Challenge expiry time (seconds) |
-| `H4CKRTH0N_USER_VERIFICATION` | `preferred` | WebAuthn user verification requirement |
-| `H4CKRTH0N_ATTESTATION` | `none` | WebAuthn attestation preference |
-| `H4CKRTH0N_PASSWORD_AUTH_ENABLED` | `false` | Enable password auth routes (requires `[password]` extra) |
-| `H4CKRTH0N_BOOTSTRAP_ADMIN_EMAILS` | `[]` | JSON list of emails that get admin role on registration |
-| `H4CKRTH0N_FIRST_USER_IS_ADMIN` | `false` | First registered user becomes admin (dev convenience) |
+| `H4CKATH0N_ENV` | `development` | `development` or `production` |
+| `H4CKATH0N_DATABASE_URL` | `sqlite:///./h4ckath0n.db` | Database connection string |
+| `H4CKATH0N_AUTH_SIGNING_KEY` | *(ephemeral in dev)* | JWT signing key (**required in production**) |
+| `H4CKATH0N_RP_ID` | `localhost` *(dev only)* | WebAuthn relying party ID (**required in production**) |
+| `H4CKATH0N_ORIGIN` | `http://localhost:8000` *(dev only)* | WebAuthn expected origin (**required in production**) |
+| `H4CKATH0N_WEBAUTHN_TTL_SECONDS` | `300` | Challenge expiry time (seconds) |
+| `H4CKATH0N_USER_VERIFICATION` | `preferred` | WebAuthn user verification requirement |
+| `H4CKATH0N_ATTESTATION` | `none` | WebAuthn attestation preference |
+| `H4CKATH0N_PASSWORD_AUTH_ENABLED` | `false` | Enable password auth routes (requires `[password]` extra) |
+| `H4CKATH0N_BOOTSTRAP_ADMIN_EMAILS` | `[]` | JSON list of emails that get admin role on registration |
+| `H4CKATH0N_FIRST_USER_IS_ADMIN` | `false` | First registered user becomes admin (dev convenience) |
 | `OPENAI_API_KEY` | — | OpenAI API key for the LLM module |
 
 In development mode, missing signing keys and WebAuthn settings generate ephemeral/localhost defaults with warnings.
@@ -199,11 +205,11 @@ LANGSMITH_PROJECT=your-project-name
 
 ### Trace IDs
 
-When observability is enabled, h4ckrth0n attaches `X-Trace-Id` to all responses:
+When observability is enabled, h4ckath0n attaches `X-Trace-Id` to all responses:
 
 ```python
-from h4ckrth0n import create_app
-from h4ckrth0n.obs import init_observability
+from h4ckath0n import create_app
+from h4ckath0n.obs import init_observability
 
 app = create_app()
 init_observability(app)
@@ -212,8 +218,8 @@ init_observability(app)
 ## Development
 
 ```bash
-git clone https://github.com/BTreeMap/h4ckrth0n.git
-cd h4ckrth0n
+git clone https://github.com/BTreeMap/h4ckath0n.git
+cd h4ckath0n
 uv sync
 uv run pytest
 ```
@@ -236,4 +242,3 @@ uv build
 ## License
 
 MIT. See `LICENSE`.
-

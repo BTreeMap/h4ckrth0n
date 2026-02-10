@@ -1,4 +1,4 @@
-"""Comprehensive integration tests for h4ckrth0n auth, RBAC, and core features."""
+"""Comprehensive integration tests for h4ckath0n auth, RBAC, and core features."""
 
 from __future__ import annotations
 
@@ -8,11 +8,11 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
-from h4ckrth0n.app import create_app
-from h4ckrth0n.auth.models import PasswordResetToken, User
-from h4ckrth0n.auth.passwords import hash_password, verify_password
-from h4ckrth0n.auth.service import _hash_token
-from h4ckrth0n.config import Settings
+from h4ckath0n.app import create_app
+from h4ckath0n.auth.models import PasswordResetToken, User
+from h4ckath0n.auth.passwords import hash_password, verify_password
+from h4ckath0n.auth.service import _hash_token
+from h4ckath0n.config import Settings
 
 
 @pytest.fixture()
@@ -117,7 +117,7 @@ class TestSignupLogin:
 
 class TestProtectedEndpoint:
     def test_no_token_rejected(self, client: TestClient, app):
-        from h4ckrth0n.auth import require_user
+        from h4ckath0n.auth import require_user
 
         @app.get("/protected")
         def protected(user=require_user()):
@@ -127,7 +127,7 @@ class TestProtectedEndpoint:
         assert r.status_code == 401
 
     def test_valid_token_accepted(self, client: TestClient, app, settings):
-        from h4ckrth0n.auth import require_user
+        from h4ckath0n.auth import require_user
 
         @app.get("/protected2")
         def protected2(user=require_user()):
@@ -150,7 +150,7 @@ class TestProtectedEndpoint:
 
 class TestAdminGate:
     def test_non_admin_rejected(self, client: TestClient, app):
-        from h4ckrth0n.auth import require_admin
+        from h4ckath0n.auth import require_admin
 
         @app.get("/admin-only")
         def admin_only(user=require_admin()):
@@ -165,7 +165,7 @@ class TestAdminGate:
         assert r.status_code == 403
 
     def test_admin_accepted(self, client: TestClient, app, settings, db_session):
-        from h4ckrth0n.auth import require_admin
+        from h4ckath0n.auth import require_admin
 
         @app.get("/admin-only2")
         def admin_only2(user=require_admin()):
@@ -197,7 +197,7 @@ class TestAdminGate:
 
 class TestScopeGate:
     def test_missing_scope_rejected(self, client: TestClient, app):
-        from h4ckrth0n.auth import require_scopes
+        from h4ckath0n.auth import require_scopes
 
         @app.post("/billing/refund")
         def refund(claims=require_scopes("billing:refund")):
@@ -212,7 +212,7 @@ class TestScopeGate:
         assert r.status_code == 403
 
     def test_present_scope_accepted(self, client: TestClient, app, settings, db_session):
-        from h4ckrth0n.auth import require_scopes
+        from h4ckath0n.auth import require_scopes
 
         @app.post("/billing/refund2")
         def refund2(claims=require_scopes("billing:refund")):
@@ -304,7 +304,7 @@ class TestPasswordReset:
         assert prt is not None
         # We need the raw token. Since we stored a hash, we must re-create one
         # for testing. Let's directly create one via the service.
-        from h4ckrth0n.auth.service import create_password_reset_token
+        from h4ckath0n.auth.service import create_password_reset_token
 
         raw = create_password_reset_token(db_session, "luna@example.com")
         assert raw is not None
@@ -335,7 +335,7 @@ class TestPasswordReset:
             "/auth/register",
             json={"email": "mike@example.com", "password": "oldP@ss1"},
         )
-        from h4ckrth0n.auth.service import create_password_reset_token
+        from h4ckath0n.auth.service import create_password_reset_token
 
         raw = create_password_reset_token(db_session, "mike@example.com")
         assert raw is not None
@@ -359,7 +359,7 @@ class TestPasswordReset:
             "/auth/register",
             json={"email": "nancy@example.com", "password": "oldP@ss1"},
         )
-        from h4ckrth0n.auth.service import create_password_reset_token
+        from h4ckath0n.auth.service import create_password_reset_token
 
         raw = create_password_reset_token(db_session, "nancy@example.com", expire_minutes=30)
         assert raw is not None
@@ -439,7 +439,7 @@ class TestBootstrapAdmin:
 
 class TestObservability:
     def test_trace_id_header(self, tmp_path):
-        from h4ckrth0n.obs import ObservabilitySettings, init_observability
+        from h4ckath0n.obs import ObservabilitySettings, init_observability
 
         db_path = tmp_path / "obs_test.db"
         s = Settings(
@@ -453,7 +453,7 @@ class TestObservability:
         assert "x-trace-id" in r.headers
 
     def test_redact_headers(self):
-        from h4ckrth0n.obs.redaction import redact_headers
+        from h4ckath0n.obs.redaction import redact_headers
 
         h = {
             "Authorization": "Bearer eyJhbGciOiJIUzI1NiJ9.test.sig",
@@ -466,7 +466,7 @@ class TestObservability:
         assert cleaned["Content-Type"] == "application/json"
 
     def test_redact_value(self):
-        from h4ckrth0n.obs.redaction import redact_value
+        from h4ckath0n.obs.redaction import redact_value
 
         val = "token eyJhbGciOiJIUzI1NiJ9.payload.sig and key sk-abcdefghijklmnopqrstuvwxyz"
         cleaned = redact_value(val)
@@ -487,9 +487,9 @@ class TestLLMClient:
             import os
 
             os.environ.pop("OPENAI_API_KEY", None)
-            os.environ.pop("H4CKRTH0N_OPENAI_API_KEY", None)
+            os.environ.pop("H4CKATH0N_OPENAI_API_KEY", None)
             with pytest.raises(RuntimeError, match="No OpenAI API key"):
-                from h4ckrth0n.llm import llm
+                from h4ckath0n.llm import llm
 
                 llm()
 
@@ -502,7 +502,7 @@ class TestLLMClient:
 class TestConfig:
     def test_production_requires_signing_key(self):
         s = Settings(env="production", auth_signing_key="")
-        with pytest.raises(RuntimeError, match="H4CKRTH0N_AUTH_SIGNING_KEY"):
+        with pytest.raises(RuntimeError, match="H4CKATH0N_AUTH_SIGNING_KEY"):
             s.effective_signing_key()
 
     def test_dev_generates_ephemeral_key(self):

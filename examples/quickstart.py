@@ -1,4 +1,4 @@
-"""h4ckrth0n quickstart – passkey-first auth with protected endpoints.
+"""h4ckath0n quickstart – passkey-first auth with protected endpoints.
 
 Run:
     uv run uvicorn examples.quickstart:app --reload
@@ -14,8 +14,8 @@ Auth flow (passkeys):
 See /passkey-demo for a minimal browser-based example.
 """
 
-from h4ckrth0n import create_app
-from h4ckrth0n.auth import require_admin, require_scopes, require_user
+from h4ckath0n import create_app
+from h4ckath0n.auth import require_admin, require_scopes, require_user
 
 app = create_app()
 
@@ -42,7 +42,7 @@ def refund(claims=require_scopes("billing:refund")):
 def llm_demo():
     """LLM wrapper demo (requires OPENAI_API_KEY)."""
     try:
-        from h4ckrth0n.llm import llm
+        from h4ckath0n.llm import llm
 
         client = llm()
         resp = client.chat(
@@ -55,9 +55,9 @@ def llm_demo():
 
 
 PASSKEY_DEMO_HTML = """<!DOCTYPE html>
-<html><head><title>h4ckrth0n Passkey Demo</title></head>
+<html><head><title>h4ckath0n Passkey Demo</title></head>
 <body>
-<h1>h4ckrth0n Passkey Demo</h1>
+<h1>h4ckath0n Passkey Demo</h1>
 <button id="register">Register (create account)</button>
 <button id="login">Login</button>
 <button id="add" disabled>Add another passkey</button>

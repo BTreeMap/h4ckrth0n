@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This repository contains **h4ckrth0n**, a Python library for shipping hackathon products quickly with strong security and performance defaults.
+This repository contains **h4ckath0n**, a Python library for shipping hackathon products quickly with strong security and performance defaults.
 
 It is designed to be “import a few lines and ship”, with:
 
@@ -40,7 +40,7 @@ It is designed to be “import a few lines and ship”, with:
 - DB: SQLAlchemy 2.x + Alembic
 - PostgreSQL driver: Psycopg 3 (binary extra used for fast install in hackathon contexts)
 - Auth: Passkeys (WebAuthn) via py_webauthn – default, no passwords required
-- Auth (optional): Argon2id password hashing via `h4ckrth0n[password]` extra
+- Auth (optional): Argon2id password hashing via `h4ckath0n[password]` extra
 - JWT: PyJWT with access tokens, refresh tokens (revocable)
 - Settings: environment-based configuration (pydantic-settings)
 - LLM: OpenAI Python SDK included by default, plus a small abstraction layer and redaction hooks
@@ -53,12 +53,12 @@ Notes:
 
 ## Repository layout
 
-- `src/h4ckrth0n/` library code (src layout)
+- `src/h4ckath0n/` library code (src layout)
 - `tests/` pytest tests
 - `examples/` runnable demo apps
 - `docs/` docs and decisions
-- `packages/create-h4ckrth0n/` npm CLI package for scaffolding full-stack projects
-- `packages/create-h4ckrth0n/templates/fullstack/` embedded project templates (web + backend)
+- `packages/create-h4ckath0n/` npm CLI package for scaffolding full-stack projects
+- `packages/create-h4ckath0n/templates/fullstack/` embedded project templates (web + backend)
 
 ## Setup commands (uv)
 
@@ -81,7 +81,7 @@ Backend (run from repo root):
 - `uv run --locked mypy src`
 - `uv run --locked pytest -v`
 
-Frontend (run from `packages/create-h4ckrth0n/templates/fullstack/web/`):
+Frontend (run from `packages/create-h4ckath0n/templates/fullstack/web/`):
 
 - `npm ci`
 - `npm run lint`
@@ -103,7 +103,7 @@ npm Trusted Publisher must reference workflow `publish.yml` and environment `npm
 ### AuthN + AuthZ model
 
 - Default auth: passkeys (WebAuthn) via py_webauthn
-- Password auth: optional extra (`h4ckrth0n[password]`), off by default
+- Password auth: optional extra (`h4ckath0n[password]`), off by default
 - Built-in roles: `user`, `admin`
 - JWT claims include:
   - `sub` (user id)
@@ -133,7 +133,7 @@ npm Trusted Publisher must reference workflow `publish.yml` and environment `npm
 ### WebAuthn challenges
 
 - Challenge state stored server-side in `webauthn_challenges` table
-- Default TTL: 300 seconds (configurable via `H4CKRTH0N_WEBAUTHN_TTL_SECONDS`)
+- Default TTL: 300 seconds (configurable via `H4CKATH0N_WEBAUTHN_TTL_SECONDS`)
 - Challenges are single-use (consumed on successful finish)
 - Expired challenges can be cleaned up via `cleanup_expired_challenges()`
 
@@ -164,7 +164,7 @@ npm Trusted Publisher must reference workflow `publish.yml` and environment `npm
 
 ## Observability (killer feature)
 
-h4ckrth0n ships LLM + agent frameworks by default and offers opt-in, end-to-end observability.
+h4ckath0n ships LLM + agent frameworks by default and offers opt-in, end-to-end observability.
 
 ### Default dependencies for agentic development
 
@@ -185,7 +185,7 @@ h4ckrth0n ships LLM + agent frameworks by default and offers opt-in, end-to-end 
 
 ### Configuration conventions
 
-- h4ckrth0n should support both:
+- h4ckath0n should support both:
   1) LangSmith-native tracing via env vars (LANGSMITH_TRACING, LANGSMITH_API_KEY, LANGSMITH_PROJECT)
   2) OpenTelemetry export when configured (OTEL_* variables)
 
@@ -210,7 +210,7 @@ LangSmith explicitly supports OpenTelemetry-based tracing. Never require users t
 
 - Default install includes the full hackathon experience:
   - FastAPI, SQLAlchemy, Alembic, psycopg, py_webauthn, OpenAI SDK
-- Password auth (Argon2) is an optional extra: `h4ckrth0n[password]`
+- Password auth (Argon2) is an optional extra: `h4ckath0n[password]`
 - Redis and background queue integrations must be optional extras.
 - Dev tools go in dependency groups (ruff/mypy/pytest). dependency-groups are standardized but not supported by all tools, uv supports them.
 
@@ -276,7 +276,7 @@ If a design choice is non-obvious, add a short note under `docs/decisions/`.
 
 ### Frontend template checks
 
-When modifying files under `packages/create-h4ckrth0n/templates/fullstack/web/`, run from that directory:
+When modifying files under `packages/create-h4ckath0n/templates/fullstack/web/`, run from that directory:
 
 - `npm run lint` (ESLint)
 - `npm run typecheck` (tsc --noEmit)
@@ -287,7 +287,7 @@ Do not commit frontend template changes that fail these checks.
 
 ### Scaffold CLI checks
 
-When modifying `packages/create-h4ckrth0n/bin/` or `packages/create-h4ckrth0n/lib/`:
+When modifying `packages/create-h4ckath0n/bin/` or `packages/create-h4ckath0n/lib/`:
 
-- Run `node packages/create-h4ckrth0n/bin/cli.js --help` to verify CLI syntax.
-- Test scaffold output with `node packages/create-h4ckrth0n/bin/cli.js test-project --no-install --no-git` in a temp directory.
+- Run `node packages/create-h4ckath0n/bin/cli.js --help` to verify CLI syntax.
+- Test scaffold output with `node packages/create-h4ckath0n/bin/cli.js test-project --no-install --no-git` in a temp directory.

@@ -56,26 +56,26 @@ jobs:
         with:
           node-version: "24"
           cache: "npm"
-          cache-dependency-path: packages/create-h4ckrth0n/templates/fullstack/web/package-lock.json
+          cache-dependency-path: packages/create-h4ckath0n/templates/fullstack/web/package-lock.json
 
       - name: Install frontend dependencies
-        working-directory: packages/create-h4ckrth0n/templates/fullstack/web
+        working-directory: packages/create-h4ckath0n/templates/fullstack/web
         run: npm ci
 
       - name: Lint frontend
-        working-directory: packages/create-h4ckrth0n/templates/fullstack/web
+        working-directory: packages/create-h4ckath0n/templates/fullstack/web
         run: npm run lint
 
       - name: Typecheck frontend
-        working-directory: packages/create-h4ckrth0n/templates/fullstack/web
+        working-directory: packages/create-h4ckath0n/templates/fullstack/web
         run: npm run typecheck
 
       - name: Test frontend
-        working-directory: packages/create-h4ckrth0n/templates/fullstack/web
+        working-directory: packages/create-h4ckath0n/templates/fullstack/web
         run: npm test
 
       - name: Build frontend
-        working-directory: packages/create-h4ckrth0n/templates/fullstack/web
+        working-directory: packages/create-h4ckath0n/templates/fullstack/web
         run: npm run build
 
   compute-version:
@@ -126,7 +126,7 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if npm view h4ckrth0n@${{ needs.compute-version.outputs.npm_version }} version >/dev/null 2>&1; then
+          if npm view h4ckath0n@${{ needs.compute-version.outputs.npm_version }} version >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
@@ -147,7 +147,7 @@ jobs:
           from urllib.error import HTTPError
           version = os.environ["PYPI_VERSION"]
           try:
-            with urllib.request.urlopen("https://pypi.org/pypi/h4ckrth0n/json") as response:
+            with urllib.request.urlopen("https://pypi.org/pypi/h4ckath0n/json") as response:
               data = json.load(response)
             exists = version in data.get("releases", {})
           except HTTPError as exc:
@@ -210,7 +210,7 @@ jobs:
       contents: read
     environment:
       name: pypi
-      url: https://pypi.org/p/h4ckrth0n
+      url: https://pypi.org/p/h4ckath0n
     steps:
       - name: Download dist
         uses: actions/download-artifact@v4
@@ -235,7 +235,7 @@ jobs:
         with:
           node-version: "24"
           cache: "npm"
-          cache-dependency-path: packages/create-h4ckrth0n/package-lock.json
+          cache-dependency-path: packages/create-h4ckath0n/package-lock.json
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -250,15 +250,15 @@ jobs:
             --channel "${{ needs.compute-version.outputs.channel }}"
 
       - name: Install CLI dependencies
-        working-directory: packages/create-h4ckrth0n
+        working-directory: packages/create-h4ckath0n
         run: npm ci
 
       - name: Build CLI package
-        working-directory: packages/create-h4ckrth0n
+        working-directory: packages/create-h4ckath0n
         run: npm run build --if-present
 
       - name: Pack CLI package
-        working-directory: packages/create-h4ckrth0n
+        working-directory: packages/create-h4ckath0n
         run: |
           mkdir -p ../../dist-npm
           npm pack --pack-destination ../../dist-npm

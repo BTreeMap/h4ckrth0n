@@ -1,6 +1,6 @@
 # Frontend Security Design
 
-This document describes the security architecture of the h4ckrth0n frontend template.
+This document describes the security architecture of the h4ckath0n frontend template.
 
 ## Device key model
 

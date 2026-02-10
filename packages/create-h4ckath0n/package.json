@@ -1,0 +1,39 @@
+{
+  "name": "h4ckath0n",
+  "version": "0.1.0",
+  "description": "Create a full-stack hackathon project with passkeys and strong defaults",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "h4ckath0n": "./bin/cli.js"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "templates/"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BTreeMap/h4ckath0n.git",
+    "directory": "packages/create-h4ckath0n"
+  },
+  "homepage": "https://github.com/BTreeMap/h4ckath0n",
+  "bugs": {
+    "url": "https://github.com/BTreeMap/h4ckath0n/issues"
+  },
+  "keywords": [
+    "hackathon",
+    "fullstack",
+    "passkeys",
+    "webauthn",
+    "react",
+    "fastapi"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

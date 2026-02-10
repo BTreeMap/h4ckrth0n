@@ -63,7 +63,7 @@ def main() -> None:
 
     root = Path(args.root).resolve() if args.root else Path(__file__).resolve().parents[1]
     pyproject_path = root / "pyproject.toml"
-    package_dir = root / "packages" / "create-h4ckrth0n"
+    package_dir = root / "packages" / "create-h4ckath0n"
     package_json_path = package_dir / "package.json"
     package_lock_path = package_dir / "package-lock.json"
 

@@ -68,7 +68,7 @@ def determine_channel(channel: str | None) -> str:
 
 def base_version_from_files(root: Path) -> tuple[int, int, int]:
     pyproject_version = read_pyproject_version(root / "pyproject.toml")
-    package_version = read_package_version(root / "packages" / "create-h4ckrth0n" / "package.json")
+    package_version = read_package_version(root / "packages" / "create-h4ckath0n" / "package.json")
     if pyproject_version != package_version:
         raise ValueError(
             "pyproject.toml and package.json versions do not match: "

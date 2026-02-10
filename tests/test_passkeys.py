@@ -15,15 +15,15 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
-from h4ckrth0n.app import create_app
-from h4ckrth0n.auth.models import User, WebAuthnChallenge, WebAuthnCredential
-from h4ckrth0n.auth.passkeys.ids import (
+from h4ckath0n.app import create_app
+from h4ckath0n.auth.models import User, WebAuthnChallenge, WebAuthnCredential
+from h4ckath0n.auth.passkeys.ids import (
     is_key_id,
     is_user_id,
     new_key_id,
     new_user_id,
 )
-from h4ckrth0n.auth.passkeys.service import (
+from h4ckath0n.auth.passkeys.service import (
     LastPasskeyError,
     cleanup_expired_challenges,
     list_passkeys,
@@ -31,7 +31,7 @@ from h4ckrth0n.auth.passkeys.service import (
     start_authentication,
     start_registration,
 )
-from h4ckrth0n.config import Settings
+from h4ckath0n.config import Settings
 
 _ALLOWED_BASE32 = set("abcdefghijklmnopqrstuvwxyz234567")
 
@@ -160,7 +160,7 @@ class TestFlowState:
         assert flow.user_id is None  # username-less
 
     def test_expired_flow_rejected(self, db_session, settings):
-        from h4ckrth0n.auth.passkeys.service import _get_valid_flow
+        from h4ckath0n.auth.passkeys.service import _get_valid_flow
 
         flow_id, _ = start_registration(db_session, settings)
         # Manually expire the flow
@@ -172,7 +172,7 @@ class TestFlowState:
             _get_valid_flow(db_session, flow_id, "register")
 
     def test_consumed_flow_rejected(self, db_session, settings):
-        from h4ckrth0n.auth.passkeys.service import _consume_flow, _get_valid_flow
+        from h4ckath0n.auth.passkeys.service import _consume_flow, _get_valid_flow
 
         flow_id, _ = start_registration(db_session, settings)
         flow = db_session.query(WebAuthnChallenge).filter_by(id=flow_id).first()
@@ -183,7 +183,7 @@ class TestFlowState:
             _get_valid_flow(db_session, flow_id, "register")
 
     def test_flow_kind_mismatch_rejected(self, db_session, settings):
-        from h4ckrth0n.auth.passkeys.service import _get_valid_flow
+        from h4ckath0n.auth.passkeys.service import _get_valid_flow
 
         flow_id, _ = start_registration(db_session, settings)
         with pytest.raises(ValueError, match="mismatch"):
@@ -342,7 +342,7 @@ class TestPasskeyRoutes:
 class TestPasskeyRevokeRoute:
     def _setup_user_with_token(self, client, db_session, settings, n_creds=2):
         """Create a user with passkeys and return (user, creds, access_token)."""
-        from h4ckrth0n.auth.jwt import create_access_token
+        from h4ckath0n.auth.jwt import create_access_token
 
         user = User()
         db_session.add(user)
@@ -410,12 +410,12 @@ class TestPasskeyRevokeRoute:
 class TestWebAuthnConfig:
     def test_production_requires_rp_id(self):
         s = Settings(env="production", rp_id="", auth_signing_key="x" * 32)
-        with pytest.raises(RuntimeError, match="H4CKRTH0N_RP_ID"):
+        with pytest.raises(RuntimeError, match="H4CKATH0N_RP_ID"):
             s.effective_rp_id()
 
     def test_production_requires_origin(self):
         s = Settings(env="production", origin="", auth_signing_key="x" * 32)
-        with pytest.raises(RuntimeError, match="H4CKRTH0N_ORIGIN"):
+        with pytest.raises(RuntimeError, match="H4CKATH0N_ORIGIN"):
             s.effective_origin()
 
     def test_dev_defaults_rp_id(self):

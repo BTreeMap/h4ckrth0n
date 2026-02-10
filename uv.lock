@@ -485,7 +485,7 @@ wheels = [
 ]
 
 [[package]]
-name = "h4ckrth0n"
+name = "h4ckath0n"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
