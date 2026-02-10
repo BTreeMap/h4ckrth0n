@@ -37,6 +37,7 @@ export default defineConfig({
       timeout: 30_000,
       env: {
         PYTHONPATH: apiDir,
+        H4CKATH0N_ORIGIN: "http://localhost:5173",
       },
     },
     {

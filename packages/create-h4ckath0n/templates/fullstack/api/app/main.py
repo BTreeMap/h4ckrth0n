@@ -73,7 +73,8 @@ async def demo_websocket(websocket: WebSocket) -> None:
     try:
         ctx = await authenticate_websocket(websocket)
     except AuthError:
-        # Reject before accepting – send close with 1008 (Policy Violation)
+        # Must accept before we can send a proper close frame with code 1008
+        await websocket.accept()
         await websocket.close(code=1008, reason="auth_failed")
         return
 
