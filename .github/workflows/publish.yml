@@ -257,6 +257,13 @@ jobs:
         working-directory: packages/create-h4ckath0n
         run: npm run build --if-present
 
+      - name: Sync README and LICENSE into npm package
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -m 0644 README.md packages/create-h4ckath0n/README.md
+          install -m 0644 LICENSE packages/create-h4ckath0n/LICENSE
+
       - name: Pack CLI package
         working-directory: packages/create-h4ckath0n
         run: |
