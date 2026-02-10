@@ -57,6 +57,8 @@ Notes:
 - `tests/` pytest tests
 - `examples/` runnable demo apps
 - `docs/` docs and decisions
+- `packages/create-h4ckrth0n/` npm CLI package for scaffolding full-stack projects
+- `packages/create-h4ckrth0n/templates/fullstack/` embedded project templates (web + backend)
 
 ## Setup commands (uv)
 
@@ -244,3 +246,21 @@ Before committing any changes, format the code and run the same checks used in C
 Do not commit code that fails any of the above commands. Fix issues first.
 
 If a design choice is non-obvious, add a short note under `docs/decisions/`.
+
+### Frontend template checks
+
+When modifying files under `packages/create-h4ckrth0n/templates/fullstack/web/`, run from that directory:
+
+- `npm run lint` (ESLint)
+- `npm run typecheck` (tsc --noEmit)
+- `npm run test` (Vitest)
+- `npm run build` (production build)
+
+Do not commit frontend template changes that fail these checks.
+
+### Scaffold CLI checks
+
+When modifying `packages/create-h4ckrth0n/bin/` or `packages/create-h4ckrth0n/lib/`:
+
+- Run `node packages/create-h4ckrth0n/bin/cli.js --help` to verify CLI syntax.
+- Test scaffold output with `node packages/create-h4ckrth0n/bin/cli.js test-project --no-install --no-git` in a temp directory.

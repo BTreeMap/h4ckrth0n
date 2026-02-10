@@ -44,6 +44,17 @@
       "automerge": true
     },
     {
+      "groupName": "npm Dependencies",
+      "matchManagers": [
+        "npm"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "automerge": true
+    },
+    {
       "matchUpdateTypes": [
         "major"
       ],
