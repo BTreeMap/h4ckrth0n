@@ -85,8 +85,14 @@ def _jwk_fingerprint(jwk: dict) -> str:
     Uses only the essential key-material fields (kty, crv, x, y) in sorted
     order so the fingerprint is stable regardless of extra metadata the
     client might include.
+
+    Raises :class:`ValueError` when required fields are missing.
     """
-    canonical = {k: jwk[k] for k in sorted(jwk) if k in ("kty", "crv", "x", "y")}
+    required = ("crv", "kty", "x", "y")
+    missing = [k for k in required if k not in jwk]
+    if missing:
+        raise ValueError(f"JWK missing required fields: {', '.join(missing)}")
+    canonical = {k: jwk[k] for k in required}
     raw = json.dumps(canonical, separators=(",", ":"), sort_keys=True)
     return hashlib.sha256(raw.encode()).hexdigest()
 
