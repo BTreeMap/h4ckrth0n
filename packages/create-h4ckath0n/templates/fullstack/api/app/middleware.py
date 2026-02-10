@@ -30,7 +30,7 @@ class CSPMiddleware(BaseHTTPMiddleware):
                 "style-src 'self'; "
                 "img-src 'self' data:; "
                 "font-src 'self'; "
-                "connect-src 'self'; "
+                "connect-src 'self' wss:; "
                 "frame-ancestors 'none'; "
                 "base-uri 'self'; "
                 "form-action 'self'"

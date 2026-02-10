@@ -3,26 +3,21 @@
 All request authentication uses device-signed ES256 JWTs.  Authorization
 (roles, scopes) is loaded from the database – the JWT carries no privilege
 claims.
+
+The core verification logic lives in :mod:`h4ckath0n.realtime.auth` so
+that HTTP, WebSocket and SSE endpoints all share a single code path.
 """
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
-import jwt
-from cryptography.hazmat.primitives import serialization
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jwt.algorithms import ECAlgorithm
 from sqlalchemy.orm import Session
 
-from h4ckath0n.auth.jwt import (
-    JWTClaims,
-    decode_device_token,
-    get_unverified_kid,
-)
-from h4ckath0n.auth.models import Device, User
+from h4ckath0n.auth.models import User
+from h4ckath0n.realtime.auth import AUD_HTTP, AuthContext, AuthError, verify_device_jwt
 
 _bearer = HTTPBearer()
 
@@ -31,49 +26,18 @@ def _get_db_from_request(request: Request) -> Session:
     return request.app.state.session_factory()  # type: ignore[no-any-return]
 
 
-def _get_claims(
+def _get_auth_context(
     request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(_bearer),
-) -> JWTClaims:
+) -> AuthContext:
     token = credentials.credentials
-
-    kid = get_unverified_kid(token)
-    if not kid:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing kid in JWT header",
-        )
-
     db: Session = _get_db_from_request(request)
     try:
-        device = db.query(Device).filter(Device.id == kid).first()
-        if not device:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Unknown device",
-            )
-
-        try:
-            jwk_dict = json.loads(device.public_key_jwk)
-            public_key = ECAlgorithm(ECAlgorithm.SHA256).from_jwk(jwk_dict)
-            pem = public_key.public_bytes(  # type: ignore[union-attr]
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo,
-            ).decode()
-        except (ValueError, KeyError, TypeError):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid device key",
-            ) from None
-
-        return decode_device_token(token, public_key_pem=pem)
-    except jwt.ExpiredSignatureError:
+        return verify_device_jwt(token, expected_aud=AUD_HTTP, db=db)
+    except AuthError as exc:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired"
-        ) from None
-    except jwt.InvalidTokenError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=exc.detail,
         ) from None
     finally:
         db.close()
@@ -81,11 +45,11 @@ def _get_claims(
 
 def _get_current_user(
     request: Request,
-    claims: JWTClaims = Depends(_get_claims),
+    ctx: AuthContext = Depends(_get_auth_context),
 ) -> User:
     db: Session = _get_db_from_request(request)
     try:
-        user = db.query(User).filter(User.id == claims.sub).first()
+        user = db.query(User).filter(User.id == ctx.user_id).first()
         if user is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
         return user

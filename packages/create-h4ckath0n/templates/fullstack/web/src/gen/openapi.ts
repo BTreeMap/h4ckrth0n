@@ -197,6 +197,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/demo/sse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Demo Sse
+         * @description Authenticated SSE stream that simulates LLM-style output chunks.
+         *
+         *     Auth: ``Authorization: Bearer <device_jwt>`` with ``aud = h4ckath0n:sse``.
+         */
+        get: operations["demo_sse_demo_sse_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -665,6 +687,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PingResponse"];
+                };
+            };
+        };
+    };
+    demo_sse_demo_sse_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };

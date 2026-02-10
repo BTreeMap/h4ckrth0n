@@ -748,6 +748,26 @@
         ]
       }
     },
+    "/demo/sse": {
+      "get": {
+        "description": "Authenticated SSE stream that simulates LLM-style output chunks.\n\nAuth: ``Authorization: Bearer <device_jwt>`` with ``aud = h4ckath0n:sse``.",
+        "operationId": "demo_sse_demo_sse_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Demo Sse",
+        "tags": [
+          "demo"
+        ]
+      }
+    },
     "/health": {
       "get": {
         "operationId": "health_health_get",

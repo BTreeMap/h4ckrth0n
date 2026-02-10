@@ -25,6 +25,7 @@ dependencies = [
     "langchain-openai>=0.3",
     "langgraph>=0.2",
     "langsmith>=0.2",
+    "sse-starlette>=2.0",
 ]
 
 [project.optional-dependencies]
@@ -74,6 +75,7 @@ module = [
     "langchain_openai.*",
     "langgraph.*",
     "langsmith.*",
+    "sse_starlette.*",
     "webauthn.*",
 ]
 ignore_missing_imports = true

@@ -28,16 +28,19 @@ def _make_device_token(
     device_id: str,
     private_key_pem: bytes,
     expire_minutes: int = 15,
+    aud: str = "h4ckath0n:http",
 ) -> str:
     """Create a device-signed ES256 JWT for testing."""
     import jwt as pyjwt
 
     now = datetime.now(UTC)
-    payload = {
+    payload: dict = {
         "sub": user_id,
         "iat": now,
         "exp": now + timedelta(minutes=expire_minutes),
     }
+    if aud:
+        payload["aud"] = aud
     return pyjwt.encode(
         payload,
         private_key_pem,

@@ -7,6 +7,7 @@ import { Login } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
 import { Settings } from "./pages/Settings";
 import { Admin } from "./pages/Admin";
+import { DemoRealtime } from "./pages/DemoRealtime";
 
 export function App() {
   return (
@@ -36,6 +37,14 @@ export function App() {
           element={
             <ProtectedRoute requiredRole="admin">
               <Admin />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/demo/realtime"
+          element={
+            <ProtectedRoute>
+              <DemoRealtime />
             </ProtectedRoute>
           }
         />

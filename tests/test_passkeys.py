@@ -384,7 +384,12 @@ class TestPasskeyRevokeRoute:
 
         now = datetime.now(UTC)
         token = pyjwt.encode(
-            {"sub": user.id, "iat": now, "exp": now + timedelta(minutes=15)},
+            {
+                "sub": user.id,
+                "iat": now,
+                "exp": now + timedelta(minutes=15),
+                "aud": "h4ckath0n:http",
+            },
             private_pem,
             algorithm="ES256",
             headers={"kid": device_id},
