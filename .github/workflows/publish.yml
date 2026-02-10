@@ -24,7 +24,7 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -88,7 +88,7 @@ jobs:
       channel: ${{ steps.compute.outputs.channel }}
       base_version: ${{ steps.compute.outputs.base_version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -165,7 +165,7 @@ jobs:
     needs: [compute-version, check-existing]
     if: needs.check-existing.outputs.pypi_exists != 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -228,7 +228,7 @@ jobs:
     needs: [compute-version, check-existing]
     if: needs.check-existing.outputs.npm_exists != 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Node
         uses: actions/setup-node@v4
