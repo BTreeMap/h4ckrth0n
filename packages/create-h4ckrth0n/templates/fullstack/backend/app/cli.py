@@ -88,9 +88,10 @@ def _find_project_root() -> str:
 
 def _print_help() -> None:
     """Print CLI help."""
-    print("h4ckrth0n CLI")
+    print("h4ckrth0n backend CLI")
     print()
     print("Usage: uv run h4ckrth0n <command>")
+    print("  (run from the backend/ directory of your scaffolded project)")
     print()
     print("Commands:")
     print("  dev     Start backend and frontend dev servers")

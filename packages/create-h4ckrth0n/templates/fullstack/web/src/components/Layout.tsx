@@ -4,7 +4,7 @@ import { Sun, Moon, Shield, LogOut, LayoutDashboard, Settings } from "lucide-rea
 import { useState, useEffect } from "react";
 
 export function Layout() {
-  const { isAuthenticated, logout, displayName } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const [dark, setDark] = useState(() => {
     if (typeof window === "undefined") return false;
     return document.documentElement.getAttribute("data-theme") === "dark" ||
@@ -56,7 +56,7 @@ export function Layout() {
                     className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-xl hover:bg-surface-alt transition-colors text-danger"
                   >
                     <LogOut className="w-4 h-4" />
-                    {displayName || "Logout"}
+                    Logout
                   </button>
                 </>
               ) : (
