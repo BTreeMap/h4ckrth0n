@@ -166,7 +166,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Demo Echo */
+        /**
+         * Demo Echo
+         * @description Echo back the message along with its reverse.
+         */
         post: operations["demo_echo_demo_echo_post"];
         delete?: never;
         options?: never;
@@ -181,7 +184,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Demo Ping */
+        /**
+         * Demo Ping
+         * @description Simple liveness ping for the demo namespace.
+         */
         get: operations["demo_ping_demo_ping_get"];
         put?: never;
         post?: never;
@@ -215,7 +221,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Healthz */
+        /**
+         * Healthz
+         * @description Readiness check for E2E and deployment probes.
+         */
         get: operations["healthz_healthz_get"];
         put?: never;
         post?: never;

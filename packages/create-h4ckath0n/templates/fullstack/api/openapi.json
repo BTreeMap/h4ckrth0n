@@ -686,6 +686,7 @@
     },
     "/demo/echo": {
       "post": {
+        "description": "Echo back the message along with its reverse.",
         "operationId": "demo_echo_demo_echo_post",
         "requestBody": {
           "content": {
@@ -727,6 +728,7 @@
     },
     "/demo/ping": {
       "get": {
+        "description": "Simple liveness ping for the demo namespace.",
         "operationId": "demo_ping_demo_ping_get",
         "responses": {
           "200": {
@@ -764,6 +766,7 @@
     },
     "/healthz": {
       "get": {
+        "description": "Readiness check for E2E and deployment probes.",
         "operationId": "healthz_healthz_get",
         "responses": {
           "200": {
