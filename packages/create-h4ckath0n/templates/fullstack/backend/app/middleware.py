@@ -9,6 +9,8 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request
 from starlette.responses import Response
 
+ENV_VAR = "H4CKATH0N_ENV"
+
 
 def add_csp_middleware(app: FastAPI) -> None:
     """Add Content-Security-Policy middleware to the FastAPI app."""
@@ -20,7 +22,7 @@ class CSPMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         response = await call_next(request)
-        env = os.getenv("H4CKATH0N_ENV", "development")
+        env = os.getenv(ENV_VAR, "development")
         if env == "production":
             csp = (
                 "default-src 'self'; "
