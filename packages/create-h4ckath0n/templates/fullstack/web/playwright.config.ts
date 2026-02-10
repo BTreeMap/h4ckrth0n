@@ -1,13 +1,13 @@
 import { defineConfig } from "@playwright/test";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveUvProject } from "./scripts/uv-project.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// In CI the h4ckath0n library is installed from the repo root.
-// Locally, the same `uv run` from repo root makes the library available.
-const repoRoot = resolve(__dirname, "../../../../..");
+const webDir = __dirname;
 const apiDir = resolve(__dirname, "../api");
+const uvProject = resolveUvProject(webDir, apiDir);
 
 export default defineConfig({
   testDir: "./e2e",
@@ -30,12 +30,13 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: `uv run --directory ${repoRoot} --locked python -m uvicorn app.main:app --host 127.0.0.1 --port 8000`,
+      command: `uv --project "${uvProject}" run --locked python -m uvicorn app.main:app --host 127.0.0.1 --port 8000`,
       cwd: apiDir,
       url: "http://127.0.0.1:8000/healthz",
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
       env: {
+        ...process.env,
         PYTHONPATH: apiDir,
         H4CKATH0N_ORIGIN: "http://localhost:5173",
       },
