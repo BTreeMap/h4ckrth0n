@@ -78,9 +78,7 @@ def _find_project_root() -> str:
         return cwd
     # Try parent of api/
     parent = os.path.dirname(cwd)
-    if os.path.isdir(os.path.join(parent, "api")) and os.path.isdir(
-        os.path.join(parent, "web")
-    ):
+    if os.path.isdir(os.path.join(parent, "api")) and os.path.isdir(os.path.join(parent, "web")):
         return parent
     # Default to cwd
     return cwd

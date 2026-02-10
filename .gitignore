@@ -15,3 +15,5 @@ build/
 *.sqlite
 *.sqlite3
 node_modules/
+playwright-report/
+test-results/
