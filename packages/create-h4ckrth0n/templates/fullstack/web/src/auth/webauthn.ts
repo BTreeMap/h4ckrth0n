@@ -56,7 +56,9 @@ export function toCreateOptions(
           name: serverOptions.user.name,
           displayName: serverOptions.user.displayName,
         }
-      : { id: new Uint8Array(), name: "", displayName: "" },
+      : (() => {
+          throw new Error("WebAuthn registration requires user data");
+        })(),
     pubKeyCredParams: (serverOptions.pubKeyCredParams ?? []).map((p) => ({
       type: p.type as PublicKeyCredentialType,
       alg: p.alg,

@@ -44,7 +44,13 @@ export async function apiFetch<T = unknown>(
     throw new AuthError("Unauthorized");
   }
 
-  const data = (await response.json().catch(() => null)) as T;
+  let data: T;
+  try {
+    data = (await response.json()) as T;
+  } catch {
+    // Non-JSON responses (e.g. 204 No Content) return null
+    data = null as T;
+  }
   return { ok: response.ok, status: response.status, data };
 }
 
