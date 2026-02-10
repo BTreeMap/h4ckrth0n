@@ -17,20 +17,41 @@ import { existsSync, mkdirSync } from "node:fs";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const webDir = resolve(__dirname, "..");
 const apiDir = resolve(webDir, "../api");
-const repoRoot = resolve(webDir, "../../../../..");
 
 const openapiJson = resolve(apiDir, "openapi.json");
 const outputTs = resolve(webDir, "src/gen/openapi.ts");
 
-// ── Step 1: Generate OpenAPI JSON from the backend ─────────────────────────
+function findMonorepoRoot(startDir) {
+  let dir = startDir;
+  while (true) {
+    const parent = dirname(dir);
+    const isRoot = parent === dir;
+
+    const hasPyproject = existsSync(resolve(dir, "pyproject.toml"));
+    const hasUvLock = existsSync(resolve(dir, "uv.lock"));
+    const hasLib = existsSync(resolve(dir, "src/h4ckath0n/__init__.py"));
+    const hasScaffolder = existsSync(resolve(dir, "packages/create-h4ckath0n/package.json"));
+
+    if (hasPyproject && hasUvLock && hasLib && hasScaffolder) return dir;
+    if (isRoot) return null;
+    dir = parent;
+  }
+}
+
+const overrideProject = process.env.H4CKATH0N_UV_PROJECT || process.env.UV_PROJECT;
+const monorepoRoot = findMonorepoRoot(webDir);
+const uvProject = overrideProject || monorepoRoot || apiDir;
+
+console.log(`→ Using uv project: ${uvProject}`);
 console.log("→ Dumping OpenAPI schema from backend…");
+
 try {
   execFileSync(
     "uv",
     [
+      "--project",
+      uvProject,
       "run",
-      "--directory",
-      repoRoot,
       "--locked",
       "python",
       "-m",
@@ -39,12 +60,12 @@ try {
       openapiJson,
     ],
     {
-      cwd: apiDir,
+      cwd: webDir,
       stdio: "inherit",
       env: { ...process.env, PYTHONPATH: apiDir },
     },
   );
-} catch (err) {
+} catch {
   console.error("✗ Failed to dump OpenAPI schema from backend.");
   process.exit(1);
 }
@@ -54,7 +75,6 @@ if (!existsSync(openapiJson)) {
   process.exit(1);
 }
 
-// ── Step 2: Generate TypeScript types ──────────────────────────────────────
 console.log("→ Generating TypeScript types from OpenAPI schema…");
 const outDir = dirname(outputTs);
 if (!existsSync(outDir)) {
@@ -67,7 +87,7 @@ try {
     ["exec", "--no", "--", "openapi-typescript", openapiJson, "-o", outputTs],
     { cwd: webDir, stdio: "inherit" },
   );
-} catch (err) {
+} catch {
   console.error("✗ openapi-typescript generation failed.");
   process.exit(1);
 }
