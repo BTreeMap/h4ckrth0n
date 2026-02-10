@@ -1,9 +1,34 @@
 import { useAuth } from "../auth";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "../components/Card";
 import { Shield, User, Key } from "lucide-react";
+import api from "../api/client";
+import type { PingResponse, EchoResponse } from "../api/types";
 
 export function Dashboard() {
   const { userId, deviceId, role, displayName } = useAuth();
+
+  // ── Demo: call GET /demo/ping via the typed client ──────────────────
+  const { data: ping } = useQuery<PingResponse>({
+    queryKey: ["demo-ping"],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/demo/ping");
+      if (error) throw new Error("ping failed");
+      return data;
+    },
+  });
+
+  // ── Demo: call POST /demo/echo via the typed client ─────────────────
+  const { data: echo } = useQuery<EchoResponse>({
+    queryKey: ["demo-echo"],
+    queryFn: async () => {
+      const { data, error } = await api.POST("/demo/echo", {
+        body: { message: "hello" },
+      });
+      if (error) throw new Error("echo failed");
+      return data;
+    },
+  });
 
   return (
     <div className="space-y-6">
@@ -51,6 +76,21 @@ export function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Demo endpoint results */}
+      <Card>
+        <CardHeader>
+          <h2 className="text-lg font-semibold text-text">API Demo</h2>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-text-muted">
+          <p data-testid="demo-ping">
+            Ping: {ping ? (ping.ok ? "✓ ok" : "✗") : "…"}
+          </p>
+          <p data-testid="demo-echo">
+            Echo: {echo ? `"${echo.message}" → "${echo.reversed}"` : "…"}
+          </p>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

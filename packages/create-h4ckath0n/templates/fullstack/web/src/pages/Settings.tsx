@@ -6,14 +6,8 @@ import { toCreateOptions, serializeCreateResponse } from "../auth/webauthn";
 import { Card, CardContent, CardHeader } from "../components/Card";
 import { Button } from "../components/Button";
 import { Alert } from "../components/Alert";
-
-interface Passkey {
-  id: string;
-  label: string | null;
-  created_at: string;
-  last_used_at: string | null;
-  revoked_at: string | null;
-}
+import api from "../api/client";
+import type { PasskeyInfo } from "../api/types";
 
 export function Settings() {
   const queryClient = useQueryClient();
@@ -21,12 +15,12 @@ export function Settings() {
   const [error, setError] = useState<string | null>(null);
   const [lastPasskeyError, setLastPasskeyError] = useState<string | null>(null);
 
-  const { data: passkeys, isLoading } = useQuery<Passkey[]>({
+  const { data: passkeys, isLoading } = useQuery<PasskeyInfo[]>({
     queryKey: ["passkeys"],
     queryFn: async () => {
-      const res = await apiFetch<{ passkeys: Passkey[] }>("/auth/passkeys");
-      if (!res.ok) throw new Error("Failed to load passkeys");
-      return res.data.passkeys;
+      const { data, error } = await api.GET("/auth/passkeys");
+      if (error) throw new Error("Failed to load passkeys");
+      return data.passkeys;
     },
   });
 
