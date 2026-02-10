@@ -104,6 +104,11 @@ test.describe("Passkey auth flows", () => {
       timeout: 10_000,
     });
 
+    // Swap to a fresh virtual authenticator to simulate a different device.
+    // The excludeCredentials check would reject the same authenticator.
+    await removeVirtualAuthenticator(auth);
+    auth = await addVirtualAuthenticator(page);
+
     // Add second passkey
     await page.getByTestId("add-passkey-btn").click();
 
@@ -141,6 +146,10 @@ test.describe("Passkey auth flows", () => {
       "Cannot revoke your last active passkey",
     );
 
+    // Swap to a fresh authenticator to simulate a different device
+    await removeVirtualAuthenticator(auth);
+    auth = await addVirtualAuthenticator(page);
+
     // Add a second passkey
     await page.getByTestId("add-passkey-btn").click();
     await expect(page.getByTestId("passkey-item")).toHaveCount(2, {
@@ -155,7 +164,6 @@ test.describe("Passkey auth flows", () => {
     // Wait for revocation to complete – one item should show "(revoked)"
     await expect(page.getByText("(revoked)")).toBeVisible({ timeout: 10_000 });
 
-    // The last-passkey error should have disappeared (or not be about last passkey)
     // Only 1 revoke button should remain (the other passkey is revoked)
     await expect(page.getByTestId("revoke-passkey-btn")).toHaveCount(1);
   });
