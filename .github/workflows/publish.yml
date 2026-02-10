@@ -292,4 +292,5 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Publish to npm
-        run: npm publish --provenance --access public --tag "${{ needs.compute-version.outputs.dist_tag }}" dist-npm/*.tgz
+        working-directory: dist-npm
+        run: npm publish ./*.tgz --provenance --access public --tag "${{ needs.compute-version.outputs.dist_tag }}"
