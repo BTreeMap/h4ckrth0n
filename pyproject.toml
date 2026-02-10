@@ -26,6 +26,7 @@ dependencies = [
     "langgraph>=0.2",
     "langsmith>=0.2",
     "sse-starlette>=2.0",
+    "cryptography>=46.0.5",
 ]
 
 [project.optional-dependencies]
