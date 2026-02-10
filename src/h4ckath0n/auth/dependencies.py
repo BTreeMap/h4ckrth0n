@@ -41,12 +41,18 @@ def _get_claims(
         try:
             device = db.query(Device).filter(Device.id == kid).first()
             if device:
-                jwk_dict = json.loads(device.public_key_jwk)
-                public_key = ECAlgorithm(ECAlgorithm.SHA256).from_jwk(jwk_dict)
-                pem = public_key.public_bytes(  # type: ignore[union-attr]
-                    encoding=serialization.Encoding.PEM,
-                    format=serialization.PublicFormat.SubjectPublicKeyInfo,
-                ).decode()
+                try:
+                    jwk_dict = json.loads(device.public_key_jwk)
+                    public_key = ECAlgorithm(ECAlgorithm.SHA256).from_jwk(jwk_dict)
+                    pem = public_key.public_bytes(  # type: ignore[union-attr]
+                        encoding=serialization.Encoding.PEM,
+                        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+                    ).decode()
+                except (ValueError, KeyError, TypeError):
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid device key",
+                    ) from None
                 return decode_device_token(token, public_key_pem=pem)
         except jwt.ExpiredSignatureError:
             raise HTTPException(
