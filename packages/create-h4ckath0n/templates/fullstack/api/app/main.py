@@ -5,3 +5,9 @@ from h4ckath0n import create_app
 
 app = create_app()
 add_csp_middleware(app)
+
+
+@app.get("/healthz")
+def healthz():  # type: ignore[no-untyped-def]
+    """Readiness check for E2E and deployment probes."""
+    return {"status": "ok"}

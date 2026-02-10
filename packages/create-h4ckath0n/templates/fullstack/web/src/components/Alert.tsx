@@ -5,6 +5,7 @@ interface AlertProps {
   variant?: "info" | "success" | "warning" | "error";
   children: ReactNode;
   className?: string;
+  "data-testid"?: string;
 }
 
 const icons = {
@@ -21,12 +22,13 @@ const styles = {
   error: "bg-danger/10 text-danger border-danger/20",
 };
 
-export function Alert({ variant = "info", children, className = "" }: AlertProps) {
+export function Alert({ variant = "info", children, className = "", "data-testid": testId }: AlertProps) {
   const Icon = icons[variant];
   return (
     <div
       className={`flex items-start gap-3 p-4 rounded-2xl border ${styles[variant]} ${className}`}
       role="alert"
+      data-testid={testId}
     >
       <Icon className="w-5 h-5 shrink-0 mt-0.5" />
       <div className="text-sm">{children}</div>

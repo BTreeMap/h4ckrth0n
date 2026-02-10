@@ -21,7 +21,7 @@ Usage: h4ckath0n <project-name> [options]
 Options:
   --no-install   Skip dependency installation (uv sync / npm install)
   --no-git       Skip git init
-  --no-python    Skip Python backend scaffolding
+  --no-python    Skip Python API scaffolding
   --no-node      Skip Node/React frontend scaffolding
   --db <type>    Database type: postgres (default) or sqlite
   -h, --help     Show this help message
@@ -145,10 +145,10 @@ function main() {
 
   // ---- Optional: install deps ----
   if (opts.install) {
-    if (opts.python && existsSync(join(projectDir, "backend"))) {
+    if (opts.python && existsSync(join(projectDir, "api"))) {
       console.log("📦 Installing Python dependencies (uv sync)...");
       try {
-        execSync("uv sync", { cwd: join(projectDir, "backend"), stdio: "inherit" });
+        execSync("uv sync", { cwd: join(projectDir, "api"), stdio: "inherit" });
         console.log("✅ Python dependencies installed.");
       } catch {
         console.warn("⚠️  uv sync failed. You can run it manually later.");
@@ -174,8 +174,8 @@ Next steps:
 
   cd ${opts.name}
 
-  # Start the backend
-  cd backend && uv run uvicorn app.main:app --reload
+  # Start the API server
+  cd api && uv run uvicorn app.main:app --reload
 
   # Start the frontend (in another terminal)
   cd web && npm run dev
