@@ -60,3 +60,18 @@ def is_key_id(value: str) -> bool:
     if value[0] != "k":
         return False
     return all(c in _ALLOWED_CHARS for c in value[1:])
+
+
+def new_device_id() -> str:
+    """Generate a device ID (32 chars, starts with ``'d'``)."""
+    s = _random_base32()
+    return "d" + s[1:]
+
+
+def is_device_id(value: str) -> bool:
+    """Return ``True`` when *value* looks like a valid device ID."""
+    if len(value) != _ID_LEN:
+        return False
+    if value[0] != "d":
+        return False
+    return all(c in _ALLOWED_CHARS for c in value[1:])

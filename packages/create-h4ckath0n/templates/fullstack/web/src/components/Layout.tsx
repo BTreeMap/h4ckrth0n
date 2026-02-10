@@ -40,6 +40,7 @@ export function Layout() {
                   <Link
                     to="/dashboard"
                     className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-xl hover:bg-surface-alt transition-colors"
+                    data-testid="nav-dashboard"
                   >
                     <LayoutDashboard className="w-4 h-4" />
                     Dashboard
@@ -47,6 +48,7 @@ export function Layout() {
                   <Link
                     to="/settings"
                     className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-xl hover:bg-surface-alt transition-colors"
+                    data-testid="nav-settings"
                   >
                     <Settings className="w-4 h-4" />
                     Settings
@@ -54,6 +56,7 @@ export function Layout() {
                   <button
                     onClick={() => void logout()}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-xl hover:bg-surface-alt transition-colors text-danger"
+                    data-testid="nav-logout"
                   >
                     <LogOut className="w-4 h-4" />
                     Logout

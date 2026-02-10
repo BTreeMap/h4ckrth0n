@@ -21,7 +21,8 @@ export function base64urlDecode(str: string): ArrayBuffer {
 
 interface ServerPublicKeyOptions {
   challenge: string;
-  rp: { name: string; id: string };
+  rp?: { name: string; id: string };
+  rpId?: string;
   user?: { id: string; name: string; displayName: string };
   pubKeyCredParams?: Array<{ type: string; alg: number }>;
   timeout?: number;
@@ -42,11 +43,15 @@ interface ServerPublicKeyOptions {
     type: string;
     transports?: string[];
   }>;
+  userVerification?: string;
 }
 
 export function toCreateOptions(
   serverOptions: ServerPublicKeyOptions,
 ): CredentialCreationOptions {
+  if (!serverOptions.rp) {
+    throw new Error("WebAuthn registration requires rp data");
+  }
   const publicKey: PublicKeyCredentialCreationOptions = {
     challenge: base64urlDecode(serverOptions.challenge),
     rp: serverOptions.rp,
@@ -80,11 +85,13 @@ export function toCreateOptions(
 export function toGetOptions(
   serverOptions: ServerPublicKeyOptions,
 ): CredentialRequestOptions {
+  const rpId = serverOptions.rpId ?? serverOptions.rp?.id;
   const publicKey: PublicKeyCredentialRequestOptions = {
     challenge: base64urlDecode(serverOptions.challenge),
-    rpId: serverOptions.rp.id,
+    rpId,
     timeout: serverOptions.timeout,
     userVerification:
+      (serverOptions.userVerification as UserVerificationRequirement) ??
       (serverOptions.authenticatorSelection
         ?.userVerification as UserVerificationRequirement) ?? "preferred",
     allowCredentials: (serverOptions.allowCredentials ?? []).map((c) => ({

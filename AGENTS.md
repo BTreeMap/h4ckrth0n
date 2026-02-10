@@ -58,7 +58,7 @@ Notes:
 - `examples/` runnable demo apps
 - `docs/` docs and decisions
 - `packages/create-h4ckath0n/` npm CLI package for scaffolding full-stack projects
-- `packages/create-h4ckath0n/templates/fullstack/` embedded project templates (web + backend)
+- `packages/create-h4ckath0n/templates/fullstack/` embedded project templates (api + web)
 
 ## Setup commands (uv)
 

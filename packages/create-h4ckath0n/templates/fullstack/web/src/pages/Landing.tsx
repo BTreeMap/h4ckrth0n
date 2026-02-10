@@ -31,13 +31,13 @@ export function Landing() {
         ) : (
           <>
             <Link to="/register">
-              <Button size="lg">
+              <Button size="lg" data-testid="landing-register">
                 <Fingerprint className="w-5 h-5" />
                 Get Started
               </Button>
             </Link>
             <Link to="/login">
-              <Button variant="secondary" size="lg">
+              <Button variant="secondary" size="lg" data-testid="landing-login">
                 Login
               </Button>
             </Link>

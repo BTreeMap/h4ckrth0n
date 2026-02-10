@@ -5,18 +5,18 @@ Full-stack hackathon project scaffolded with [h4ckath0n](https://github.com/BTre
 ## Quick start
 
 ```bash
-# Start both backend and frontend
-cd backend
+# Start both API and web servers
+cd api
 uv run h4ckath0n dev
 ```
 
-Backend runs at http://localhost:8000, frontend at http://localhost:5173.
+API runs at http://localhost:8000, web at http://localhost:5173.
 
 ## Structure
 
 ```
 {{PROJECT_NAME}}/
-  backend/    Python (FastAPI + h4ckath0n library)
+  api/        Python (FastAPI + h4ckath0n library)
   web/        React + Vite + TypeScript + Tailwind v4
   .env        Environment variables (gitignored)
 ```
@@ -31,15 +31,15 @@ Backend runs at http://localhost:8000, frontend at http://localhost:5173.
 
 ## Development
 
-### Backend
+### API
 
 ```bash
-cd backend
+cd api
 uv sync
 uv run uvicorn app.main:app --reload
 ```
 
-### Frontend
+### Web
 
 ```bash
 cd web

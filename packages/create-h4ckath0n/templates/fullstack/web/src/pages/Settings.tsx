@@ -37,11 +37,17 @@ export function Settings() {
         method: "POST",
       });
       if (!res.ok) {
-        const data = res.data as { error?: string; detail?: string };
-        if (data.error === "LAST_PASSKEY" || data.detail?.includes("LAST_PASSKEY")) {
+        const data = res.data as { error?: string; detail?: string | { code?: string; message?: string } };
+        const detail = data.detail;
+        if (
+          data.error === "LAST_PASSKEY" ||
+          (typeof detail === "string" && detail.includes("LAST_PASSKEY")) ||
+          (typeof detail === "object" && detail?.code === "LAST_PASSKEY")
+        ) {
           throw new Error("LAST_PASSKEY");
         }
-        throw new Error(data.detail || "Revoke failed");
+        const msg = typeof detail === "string" ? detail : (detail as { message?: string })?.message || "Revoke failed";
+        throw new Error(msg);
       }
     },
     onSuccess: () => {
@@ -102,9 +108,9 @@ export function Settings() {
         <p className="text-text-muted">Manage your passkeys and account security</p>
       </div>
 
-      {error && <Alert variant="error">{error}</Alert>}
+      {error && <Alert variant="error" data-testid="settings-error">{error}</Alert>}
       {lastPasskeyError && (
-        <Alert variant="warning">
+        <Alert variant="warning" data-testid="last-passkey-error">
           <div className="flex items-start gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{lastPasskeyError}</span>
@@ -119,7 +125,7 @@ export function Settings() {
             <h2 className="text-lg font-semibold text-text">Passkeys</h2>
             <span className="text-sm text-text-muted">({activePasskeys.length} active)</span>
           </div>
-          <Button size="sm" onClick={handleAddPasskey} disabled={addLoading}>
+          <Button size="sm" onClick={handleAddPasskey} disabled={addLoading} data-testid="add-passkey-btn">
             <Plus className="w-4 h-4" />
             {addLoading ? "Adding..." : "Add Passkey"}
           </Button>
@@ -132,7 +138,7 @@ export function Settings() {
           ) : passkeys && passkeys.length > 0 ? (
             <div className="divide-y divide-border">
               {passkeys.map((passkey) => (
-                <div key={passkey.id} className="flex items-center justify-between py-3">
+                <div key={passkey.id} className="flex items-center justify-between py-3" data-testid="passkey-item">
                   <div>
                     <p className="text-sm font-medium text-text">
                       {passkey.label || "Unnamed passkey"}
@@ -154,6 +160,7 @@ export function Settings() {
                       size="sm"
                       onClick={() => revokeMutation.mutate(passkey.id)}
                       disabled={revokeMutation.isPending}
+                      data-testid="revoke-passkey-btn"
                     >
                       <Trash2 className="w-3 h-3" />
                       Revoke
