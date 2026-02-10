@@ -2,19 +2,19 @@ import { getOrMintToken } from "./token";
 
 /**
  * Create an authenticated WebSocket connection.
- * Sends auth token as first message frame instead of query string.
- * Never put tokens in WebSocket URL query params.
+ *
+ * The token is passed in the URL query string (`?token=<jwt>`) because
+ * the browser WebSocket API does not support custom headers.  The JWT
+ * uses `aud = h4ckath0n:ws` to prevent cross-channel reuse.
  */
 export async function createAuthWebSocket(
   url: string,
   onMessage?: (data: unknown) => void,
 ): Promise<WebSocket> {
   const token = await getOrMintToken("ws");
-  const ws = new WebSocket(url);
-
-  ws.addEventListener("open", () => {
-    ws.send(JSON.stringify({ type: "auth", token }));
-  });
+  const sep = url.includes("?") ? "&" : "?";
+  const wsUrl = `${url}${sep}token=${encodeURIComponent(token)}`;
+  const ws = new WebSocket(wsUrl);
 
   if (onMessage) {
     ws.addEventListener("message", (event) => {

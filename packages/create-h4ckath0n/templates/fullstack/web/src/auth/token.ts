@@ -1,24 +1,45 @@
 import { SignJWT } from "jose";
 import { getPrivateKey, getDeviceIdentity } from "./deviceKey";
 
-let cachedToken: string | null = null;
-let cachedExp: number = 0;
+/** Map from usage to { token, exp } for per-channel caching. */
+const tokenCache = new Map<string, { token: string; exp: number }>();
 
 const TOKEN_LIFETIME = 900; // 15 minutes in seconds
 const RENEWAL_BUFFER = 60; // renew 60s before expiry
 
-export function isTokenValid(): boolean {
-  if (!cachedToken) return false;
+/** Audience constants matching server-side values. */
+export const AUD_HTTP = "h4ckath0n:http";
+export const AUD_WS = "h4ckath0n:ws";
+export const AUD_SSE = "h4ckath0n:sse";
+
+type TokenUsage = "http" | "ws" | "sse";
+
+function audForUsage(usage: TokenUsage): string {
+  switch (usage) {
+    case "http":
+      return AUD_HTTP;
+    case "ws":
+      return AUD_WS;
+    case "sse":
+      return AUD_SSE;
+  }
+}
+
+export function isTokenValid(usage: TokenUsage = "http"): boolean {
+  const entry = tokenCache.get(usage);
+  if (!entry) return false;
   const now = Math.floor(Date.now() / 1000);
-  return now < cachedExp - RENEWAL_BUFFER;
+  return now < entry.exp - RENEWAL_BUFFER;
 }
 
-export async function getOrMintToken(aud?: string): Promise<string> {
-  if (isTokenValid() && cachedToken) return cachedToken;
-  return mintToken(aud);
+export async function getOrMintToken(usage: TokenUsage = "http"): Promise<string> {
+  if (isTokenValid(usage)) {
+    return tokenCache.get(usage)!.token;
+  }
+  return mintToken(usage);
 }
 
-export async function mintToken(aud?: string): Promise<string> {
+export async function mintToken(usage: TokenUsage = "http"): Promise<string> {
   const privateKey = await getPrivateKey();
   const identity = await getDeviceIdentity();
   if (!privateKey || !identity) {
@@ -27,33 +48,30 @@ export async function mintToken(aud?: string): Promise<string> {
 
   const now = Math.floor(Date.now() / 1000);
   const exp = now + TOKEN_LIFETIME;
+  const aud = audForUsage(usage);
 
-  let builder = new SignJWT({ sub: identity.userId })
+  const token = await new SignJWT({ sub: identity.userId })
     .setProtectedHeader({
       alg: "ES256",
       typ: "JWT",
       kid: identity.deviceId,
     })
     .setIssuedAt(now)
-    .setExpirationTime(exp);
+    .setExpirationTime(exp)
+    .setAudience(aud)
+    .sign(privateKey);
 
-  if (aud) {
-    builder = builder.setAudience(aud);
-  }
-
-  const token = await builder.sign(privateKey);
-  cachedToken = token;
-  cachedExp = exp;
+  tokenCache.set(usage, { token, exp });
   return token;
 }
 
 export function clearCachedToken(): void {
-  cachedToken = null;
-  cachedExp = 0;
+  tokenCache.clear();
 }
 
-export function shouldRenewToken(): boolean {
-  if (!cachedToken) return true;
+export function shouldRenewToken(usage: TokenUsage = "http"): boolean {
+  const entry = tokenCache.get(usage);
+  if (!entry) return true;
   const now = Math.floor(Date.now() / 1000);
-  return now >= cachedExp - RENEWAL_BUFFER;
+  return now >= entry.exp - RENEWAL_BUFFER;
 }

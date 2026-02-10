@@ -38,10 +38,12 @@ export type EchoResponse = components["schemas"]["EchoResponse"];
 type _AssertPasskeysGet = paths["/auth/passkeys"]["get"];
 type _AssertDemoEchoPost = paths["/demo/echo"]["post"];
 type _AssertDemoPingGet = paths["/demo/ping"]["get"];
+type _AssertDemoSseGet = paths["/demo/sse"]["get"];
 
 // Suppress "declared but never read" – they exist purely for the type check.
 export type {
   _AssertPasskeysGet,
   _AssertDemoEchoPost,
   _AssertDemoPingGet,
+  _AssertDemoSseGet,
 };

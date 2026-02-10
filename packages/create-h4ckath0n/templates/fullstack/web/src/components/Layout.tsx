@@ -1,6 +1,6 @@
 import { Outlet, Link } from "react-router";
 import { useAuth } from "../auth";
-import { Sun, Moon, Shield, LogOut, LayoutDashboard, Settings } from "lucide-react";
+import { Sun, Moon, Shield, LogOut, LayoutDashboard, Settings, Radio } from "lucide-react";
 import { useState, useEffect } from "react";
 
 export function Layout() {
@@ -52,6 +52,14 @@ export function Layout() {
                   >
                     <Settings className="w-4 h-4" />
                     Settings
+                  </Link>
+                  <Link
+                    to="/demo/realtime"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-xl hover:bg-surface-alt transition-colors"
+                    data-testid="nav-realtime"
+                  >
+                    <Radio className="w-4 h-4" />
+                    Realtime
                   </Link>
                   <button
                     onClick={() => void logout()}
