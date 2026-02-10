@@ -196,7 +196,7 @@ jobs:
         run: uv build
 
       - name: Upload dist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: python-dist
           path: dist/*
@@ -213,7 +213,7 @@ jobs:
       url: https://pypi.org/p/h4ckath0n
     steps:
       - name: Download dist
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python-dist
           path: dist
@@ -264,7 +264,7 @@ jobs:
           npm pack --pack-destination ../../dist-npm
 
       - name: Upload npm dist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: npm-dist
           path: dist-npm/*.tgz
@@ -280,7 +280,7 @@ jobs:
       name: npm
     steps:
       - name: Download npm dist
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: npm-dist
           path: dist-npm
