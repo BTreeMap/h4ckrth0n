@@ -71,6 +71,33 @@ Notes:
 
 uv automatically locks and syncs on `uv run`. `--locked` disables auto-lock updates.
 
+## CI quality gates
+
+Backend (run from repo root):
+
+- `uv sync --locked --all-extras`
+- `uv run --locked ruff format --check .`
+- `uv run --locked ruff check .`
+- `uv run --locked mypy src`
+- `uv run --locked pytest -v`
+
+Frontend (run from `packages/create-h4ckrth0n/templates/fullstack/web/`):
+
+- `npm ci`
+- `npm run lint`
+- `npm run typecheck`
+- `npm test`
+- `npm run build`
+
+## Release channels
+
+- **dev** (pushes to main): base `X.Y.(Z+1)`, npm `X.Y.(Z+1)-dev.YYYY-MM-DD.HH-MM-SS.<sha7>`, PyPI `X.Y.(Z+1).devYYYYMMDDHHMMSS`, dist-tag `dev`.
+- **nightly** (scheduled): base `X.Y.(Z+1)`, npm `X.Y.(Z+1)-dev.YYYY-MM-DD`, PyPI `X.Y.(Z+1).devYYYYMMDD`, dist-tag `nightly`.
+- **stable** (tag `vX.Y.Z`): publish `X.Y.Z` with dist-tag `latest`.
+
+PyPI Trusted Publisher must reference workflow `publish.yml` and environment `pypi`.
+npm Trusted Publisher must reference workflow `publish.yml` and environment `npm`.
+
 ## Opinionated defaults to preserve
 
 ### AuthN + AuthZ model
