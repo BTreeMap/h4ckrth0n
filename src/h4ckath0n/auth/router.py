@@ -46,6 +46,16 @@ def _password_router() -> APIRouter:
         "/register",
         response_model=schemas.DeviceBindingResponse,
         status_code=status.HTTP_201_CREATED,
+        summary="Register with password",
+        description=(
+            "Create a new account using email and password, then bind an optional device key."
+        ),
+        responses={
+            409: {
+                "model": schemas.ErrorResponse,
+                "description": "Email already registered.",
+            }
+        },
     )
     def register(body: schemas.RegisterRequest, request: Request, db: Session = Depends(_db_dep)):
         settings = request.app.state.settings
@@ -56,7 +66,18 @@ def _password_router() -> APIRouter:
         device_id = register_device(db, user.id, body.device_public_key_jwk, body.device_label)
         return schemas.DeviceBindingResponse(user_id=user.id, device_id=device_id, role=user.role)
 
-    @pw.post("/login", response_model=schemas.DeviceBindingResponse)
+    @pw.post(
+        "/login",
+        response_model=schemas.DeviceBindingResponse,
+        summary="Login with password",
+        description="Verify email and password, then bind an optional device key.",
+        responses={
+            401: {
+                "model": schemas.ErrorResponse,
+                "description": "Invalid email or password.",
+            }
+        },
+    )
     def login(body: schemas.LoginRequest, request: Request, db: Session = Depends(_db_dep)):
         user = authenticate_user(db, body.email, body.password)
         if user is None:
@@ -66,7 +87,15 @@ def _password_router() -> APIRouter:
         device_id = register_device(db, user.id, body.device_public_key_jwk, body.device_label)
         return schemas.DeviceBindingResponse(user_id=user.id, device_id=device_id, role=user.role)
 
-    @pw.post("/password-reset/request", response_model=schemas.MessageResponse)
+    @pw.post(
+        "/password-reset/request",
+        response_model=schemas.MessageResponse,
+        summary="Request a password reset",
+        description=(
+            "Request a password reset token for the account. Returns the same message "
+            "even when the email is unknown."
+        ),
+    )
     def password_reset_request(
         body: schemas.PasswordResetRequestSchema,
         request: Request,
@@ -80,7 +109,20 @@ def _password_router() -> APIRouter:
             message="If that email is registered, a reset link was sent."
         )
 
-    @pw.post("/password-reset/confirm", response_model=schemas.DeviceBindingResponse)
+    @pw.post(
+        "/password-reset/confirm",
+        response_model=schemas.DeviceBindingResponse,
+        summary="Confirm password reset",
+        description=(
+            "Confirm a password reset token, set a new password, and bind an optional device key."
+        ),
+        responses={
+            400: {
+                "model": schemas.ErrorResponse,
+                "description": "Invalid or expired reset token.",
+            }
+        },
+    )
     def password_reset_confirm(
         body: schemas.PasswordResetConfirmSchema,
         db: Session = Depends(_db_dep),

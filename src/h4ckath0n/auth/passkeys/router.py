@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from h4ckath0n.auth import schemas as auth_schemas
 from h4ckath0n.auth.dependencies import _get_current_user
 from h4ckath0n.auth.models import User
 from h4ckath0n.auth.passkeys import schemas
@@ -42,7 +43,21 @@ def _db_dep(request: Request):  # type: ignore[no-untyped-def]
 # ---------------------------------------------------------------------------
 
 
-@router.post("/register/start", response_model=schemas.PasskeyRegisterStartResponse)
+@router.post(
+    "/register/start",
+    response_model=schemas.PasskeyRegisterStartResponse,
+    summary="Start passkey registration",
+    description=(
+        "Begin a passkey registration ceremony. Creates a new user and a single-use "
+        "challenge flow, then returns WebAuthn registration options."
+    ),
+    responses={
+        400: {
+            "model": auth_schemas.ErrorResponse,
+            "description": "Invalid request or WebAuthn configuration error.",
+        }
+    },
+)
 def register_start(request: Request, db: Session = Depends(_db_dep)):
     settings = request.app.state.settings
     flow_id, options = start_registration(db, settings)
@@ -53,6 +68,17 @@ def register_start(request: Request, db: Session = Depends(_db_dep)):
     "/register/finish",
     response_model=schemas.PasskeyFinishResponse,
     status_code=status.HTTP_201_CREATED,
+    summary="Finish passkey registration",
+    description=(
+        "Finish passkey registration by verifying the WebAuthn attestation for the "
+        "flow and binding an optional device key."
+    ),
+    responses={
+        400: {
+            "model": auth_schemas.ErrorResponse,
+            "description": "Invalid or expired flow, or invalid WebAuthn payload.",
+        }
+    },
 )
 def register_finish(
     body: schemas.PasskeyRegisterFinishRequest,
@@ -75,14 +101,35 @@ def register_finish(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/login/start", response_model=schemas.PasskeyLoginStartResponse)
+@router.post(
+    "/login/start",
+    response_model=schemas.PasskeyLoginStartResponse,
+    summary="Start passkey login",
+    description=(
+        "Begin a username-less passkey login ceremony and return WebAuthn authentication options."
+    ),
+)
 def login_start(request: Request, db: Session = Depends(_db_dep)):
     settings = request.app.state.settings
     flow_id, options = start_authentication(db, settings)
     return schemas.PasskeyLoginStartResponse(flow_id=flow_id, options=options)
 
 
-@router.post("/login/finish", response_model=schemas.PasskeyFinishResponse)
+@router.post(
+    "/login/finish",
+    response_model=schemas.PasskeyFinishResponse,
+    summary="Finish passkey login",
+    description=(
+        "Finish passkey login by verifying the WebAuthn assertion for the flow and "
+        "binding an optional device key."
+    ),
+    responses={
+        401: {
+            "model": auth_schemas.ErrorResponse,
+            "description": "Invalid credentials, revoked passkey, or expired flow.",
+        }
+    },
+)
 def login_finish(
     body: schemas.PasskeyLoginFinishRequest,
     request: Request,
@@ -104,7 +151,17 @@ def login_finish(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/add/start", response_model=schemas.PasskeyAddStartResponse)
+@router.post(
+    "/add/start",
+    response_model=schemas.PasskeyAddStartResponse,
+    summary="Start adding a passkey",
+    description=(
+        "Begin adding a new passkey for the authenticated user and return registration options."
+    ),
+    responses={
+        401: {"model": auth_schemas.ErrorResponse, "description": "Missing or invalid token."}
+    },
+)
 def add_start(
     request: Request,
     user: User = Depends(_get_current_user),
@@ -115,7 +172,20 @@ def add_start(
     return schemas.PasskeyAddStartResponse(flow_id=flow_id, options=options)
 
 
-@router.post("/add/finish", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/add/finish",
+    response_model=schemas.PasskeyFinishResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Finish adding a passkey",
+    description="Verify the WebAuthn attestation and attach the new passkey to the user.",
+    responses={
+        400: {
+            "model": auth_schemas.ErrorResponse,
+            "description": "Invalid or expired flow, or WebAuthn verification error.",
+        },
+        401: {"model": auth_schemas.ErrorResponse, "description": "Missing or invalid token."},
+    },
+)
 def add_finish(
     body: schemas.PasskeyAddFinishRequest,
     request: Request,
@@ -140,7 +210,15 @@ def add_finish(
 passkeys_router = APIRouter(prefix="/auth/passkeys", tags=["passkey"])
 
 
-@passkeys_router.get("", response_model=schemas.PasskeyListResponse)
+@passkeys_router.get(
+    "",
+    response_model=schemas.PasskeyListResponse,
+    summary="List passkeys",
+    description="List all passkeys, including revoked entries, for the current user.",
+    responses={
+        401: {"model": auth_schemas.ErrorResponse, "description": "Missing or invalid token."}
+    },
+)
 def passkeys_list(
     request: Request,
     user: User = Depends(_get_current_user),
@@ -160,7 +238,33 @@ def passkeys_list(
     return schemas.PasskeyListResponse(passkeys=items)
 
 
-@passkeys_router.post("/{key_id}/revoke")
+@passkeys_router.post(
+    "/{key_id}/revoke",
+    response_model=schemas.PasskeyRevokeResponse,
+    summary="Revoke a passkey",
+    description=(
+        "Revoke a passkey by its internal key ID. The last active passkey cannot be revoked "
+        "and returns the LAST_PASSKEY error."
+    ),
+    responses={
+        401: {"model": auth_schemas.ErrorResponse, "description": "Missing or invalid token."},
+        404: {"model": auth_schemas.ErrorResponse, "description": "Passkey not found."},
+        409: {
+            "model": auth_schemas.ErrorResponse,
+            "description": "Cannot revoke the last active passkey.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": {
+                            "code": "LAST_PASSKEY",
+                            "message": "Cannot revoke the last active passkey.",
+                        }
+                    }
+                }
+            },
+        },
+    },
+)
 def passkey_revoke(
     key_id: str,
     request: Request,
@@ -172,11 +276,13 @@ def passkey_revoke(
     except LastPasskeyError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "code": "LAST_PASSKEY",
-                "message": "Cannot revoke the last active passkey. "
-                "Add another passkey via POST /auth/passkey/add/start first.",
-            },
+            detail=schemas.PasskeyRevokeError(
+                code="LAST_PASSKEY",
+                message=(
+                    "Cannot revoke the last active passkey. Add another passkey via "
+                    "POST /auth/passkey/add/start first."
+                ),
+            ).model_dump(),
         ) from None
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from None

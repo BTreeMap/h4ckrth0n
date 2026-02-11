@@ -21,7 +21,7 @@ const apiDir = resolve(webDir, "../api");
 const uvProject = resolveUvProject(webDir, apiDir);
 
 const openapiJson = resolve(apiDir, "openapi.json");
-const outputTs = resolve(webDir, "src/gen/openapi.ts");
+const outputTs = resolve(webDir, "src/api/openapi.ts");
 
 // ── Step 1: Generate OpenAPI JSON from the backend ─────────────────────────
 console.log(`→ Using uv project: ${uvProject}`);

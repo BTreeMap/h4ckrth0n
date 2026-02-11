@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import FastAPI
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import sessionmaker
 
 from h4ckath0n.auth.passkeys.router import passkeys_router
@@ -51,12 +52,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             pass  # argon2-cffi not installed
 
     # --- default routes ---
-    @app.get("/")
-    def root():  # type: ignore[no-untyped-def]
-        return {"message": "Welcome to your h4ckath0n app!"}
+    class RootResponse(BaseModel):
+        message: str = Field(..., description="Welcome message.")
 
-    @app.get("/health")
-    def health():  # type: ignore[no-untyped-def]
-        return {"status": "healthy"}
+    class HealthResponse(BaseModel):
+        status: str = Field(..., description="Health status string.")
+
+    @app.get(
+        "/",
+        response_model=RootResponse,
+        summary="Welcome",
+        description="Default root route provided by h4ckath0n.",
+    )
+    def root() -> RootResponse:
+        return RootResponse(message="Welcome to your h4ckath0n app!")
+
+    @app.get(
+        "/health",
+        response_model=HealthResponse,
+        summary="Health",
+        description="Basic health check for the app.",
+    )
+    def health() -> HealthResponse:
+        return HealthResponse(status="healthy")
 
     return app

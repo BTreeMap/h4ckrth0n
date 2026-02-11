@@ -6,7 +6,7 @@ import json
 from datetime import UTC, datetime
 
 from fastapi import WebSocket, WebSocketDisconnect
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -23,10 +23,18 @@ app = create_app()
 add_csp_middleware(app)
 
 
-@app.get("/healthz")
-def healthz() -> dict[str, str]:
-    """Readiness check for E2E and deployment probes."""
-    return {"status": "ok"}
+class HealthzResponse(BaseModel):
+    status: str = Field(..., description="Health check status.")
+
+
+@app.get(
+    "/healthz",
+    response_model=HealthzResponse,
+    summary="Health check",
+    description="Readiness check for E2E and deployment probes.",
+)
+def healthz() -> HealthzResponse:
+    return HealthzResponse(status="ok")
 
 
 # ---------------------------------------------------------------------------
@@ -36,27 +44,37 @@ def healthz() -> dict[str, str]:
 
 
 class PingResponse(BaseModel):
-    ok: bool
+    ok: bool = Field(..., description="True when the service is reachable.")
 
 
 class EchoRequest(BaseModel):
-    message: str
+    message: str = Field(..., description="Message to echo back.")
 
 
 class EchoResponse(BaseModel):
-    message: str
-    reversed: str
+    message: str = Field(..., description="Original message.")
+    reversed: str = Field(..., description="Reversed message.")
 
 
-@app.get("/demo/ping", tags=["demo"])
+@app.get(
+    "/demo/ping",
+    tags=["demo"],
+    response_model=PingResponse,
+    summary="Demo ping",
+    description="Simple liveness ping for the demo namespace.",
+)
 def demo_ping() -> PingResponse:
-    """Simple liveness ping for the demo namespace."""
     return PingResponse(ok=True)
 
 
-@app.post("/demo/echo", tags=["demo"])
+@app.post(
+    "/demo/echo",
+    tags=["demo"],
+    response_model=EchoResponse,
+    summary="Demo echo",
+    description="Echo back the message along with its reverse.",
+)
 def demo_echo(body: EchoRequest) -> EchoResponse:
-    """Echo back the message along with its reverse."""
     return EchoResponse(message=body.message, reversed=body.message[::-1])
 
 
@@ -135,18 +153,36 @@ async def demo_websocket(websocket: WebSocket) -> None:
 class SSEChunk(BaseModel):
     """Schema for SSE chunk data (for OpenAPI docs)."""
 
-    i: int
-    text: str
-    server_time: str
+    i: int = Field(..., description="Chunk index.")
+    text: str = Field(..., description="Chunk text.")
+    server_time: str = Field(..., description="Server timestamp in ISO format.")
 
 
 class SSEDone(BaseModel):
     """Schema for SSE done event (for OpenAPI docs)."""
 
-    ok: bool
+    ok: bool = Field(..., description="True when streaming completes.")
 
 
-@app.get("/demo/sse", tags=["demo"])
+@app.get(
+    "/demo/sse",
+    tags=["demo"],
+    summary="Demo SSE stream",
+    description=(
+        "Authenticated SSE stream that simulates chunked output. Requires a device JWT with "
+        "aud set to h4ckath0n:sse."
+    ),
+    responses={
+        200: {
+            "description": "Event stream with chunk and done events.",
+            "content": {"text/event-stream": {"schema": {"type": "string"}}},
+        },
+        401: {
+            "description": "Missing or invalid device JWT.",
+            "content": {"application/json": {"example": {"detail": "Missing token"}}},
+        },
+    },
+)
 async def demo_sse(request: Request):  # type: ignore[no-untyped-def]
     """Authenticated SSE stream that simulates LLM-style output chunks.
 

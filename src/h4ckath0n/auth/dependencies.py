@@ -19,7 +19,13 @@ from sqlalchemy.orm import Session
 from h4ckath0n.auth.models import User
 from h4ckath0n.realtime.auth import AUD_HTTP, AuthContext, AuthError, verify_device_jwt
 
-_bearer = HTTPBearer()
+_bearer = HTTPBearer(
+    scheme_name="DeviceJWT",
+    description=(
+        "Device-signed ES256 JWT minted by the client. The JWT header must include "
+        "kid set to the device id, and the aud claim must be h4ckath0n:http."
+    ),
+)
 
 
 def _get_db_from_request(request: Request) -> Session:

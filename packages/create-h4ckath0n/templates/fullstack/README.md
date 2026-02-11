@@ -29,6 +29,17 @@ API runs at http://localhost:8000, web at http://localhost:5173.
 - Server verifies JWT signature and enforces RBAC from the database
 - No privilege claims in the JWT; all roles/scopes are server-derived
 
+## OpenAPI types
+
+The template keeps OpenAPI and frontend types in sync.
+
+```bash
+cd web
+npm run gen
+```
+
+This command regenerates `api/openapi.json` and `web/src/api/openapi.ts`.
+
 ## Development
 
 ### API

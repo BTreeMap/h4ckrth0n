@@ -8,7 +8,7 @@
  * These types are also re-exported for use in app code.
  */
 
-import type { components, paths } from "../gen/openapi";
+import type { components, paths } from "./openapi";
 
 // ── Library-supplied types ────────────────────────────────────────────────
 

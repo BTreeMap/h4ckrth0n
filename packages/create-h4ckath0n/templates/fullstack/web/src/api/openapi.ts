@@ -11,7 +11,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Root */
+        /**
+         * Welcome
+         * @description Default root route provided by h4ckath0n.
+         */
         get: operations["root__get"];
         put?: never;
         post?: never;
@@ -30,7 +33,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Add Finish */
+        /**
+         * Finish adding a passkey
+         * @description Verify the WebAuthn attestation and attach the new passkey to the user.
+         */
         post: operations["add_finish_auth_passkey_add_finish_post"];
         delete?: never;
         options?: never;
@@ -47,7 +53,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Add Start */
+        /**
+         * Start adding a passkey
+         * @description Begin adding a new passkey for the authenticated user and return registration options.
+         */
         post: operations["add_start_auth_passkey_add_start_post"];
         delete?: never;
         options?: never;
@@ -64,7 +73,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Login Finish */
+        /**
+         * Finish passkey login
+         * @description Finish passkey login by verifying the WebAuthn assertion for the flow and binding an optional device key.
+         */
         post: operations["login_finish_auth_passkey_login_finish_post"];
         delete?: never;
         options?: never;
@@ -81,7 +93,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Login Start */
+        /**
+         * Start passkey login
+         * @description Begin a username-less passkey login ceremony and return WebAuthn authentication options.
+         */
         post: operations["login_start_auth_passkey_login_start_post"];
         delete?: never;
         options?: never;
@@ -98,7 +113,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Register Finish */
+        /**
+         * Finish passkey registration
+         * @description Finish passkey registration by verifying the WebAuthn attestation for the flow and binding an optional device key.
+         */
         post: operations["register_finish_auth_passkey_register_finish_post"];
         delete?: never;
         options?: never;
@@ -115,7 +133,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Register Start */
+        /**
+         * Start passkey registration
+         * @description Begin a passkey registration ceremony. Creates a new user and a single-use challenge flow, then returns WebAuthn registration options.
+         */
         post: operations["register_start_auth_passkey_register_start_post"];
         delete?: never;
         options?: never;
@@ -130,7 +151,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Passkeys List */
+        /**
+         * List passkeys
+         * @description List all passkeys, including revoked entries, for the current user.
+         */
         get: operations["passkeys_list_auth_passkeys_get"];
         put?: never;
         post?: never;
@@ -149,7 +173,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Passkey Revoke */
+        /**
+         * Revoke a passkey
+         * @description Revoke a passkey by its internal key ID. The last active passkey cannot be revoked and returns the LAST_PASSKEY error.
+         */
         post: operations["passkey_revoke_auth_passkeys__key_id__revoke_post"];
         delete?: never;
         options?: never;
@@ -167,7 +194,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Demo Echo
+         * Demo echo
          * @description Echo back the message along with its reverse.
          */
         post: operations["demo_echo_demo_echo_post"];
@@ -185,7 +212,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Demo Ping
+         * Demo ping
          * @description Simple liveness ping for the demo namespace.
          */
         get: operations["demo_ping_demo_ping_get"];
@@ -205,10 +232,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Demo Sse
-         * @description Authenticated SSE stream that simulates LLM-style output chunks.
-         *
-         *     Auth: ``Authorization: Bearer <device_jwt>`` with ``aud = h4ckath0n:sse``.
+         * Demo SSE stream
+         * @description Authenticated SSE stream that simulates chunked output. Requires a device JWT with aud set to h4ckath0n:sse.
          */
         get: operations["demo_sse_demo_sse_get"];
         put?: never;
@@ -226,7 +251,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Health */
+        /**
+         * Health
+         * @description Basic health check for the app.
+         */
         get: operations["health_health_get"];
         put?: never;
         post?: never;
@@ -244,7 +272,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Healthz
+         * Health check
          * @description Readiness check for E2E and deployment probes.
          */
         get: operations["healthz_healthz_get"];
@@ -262,54 +290,122 @@ export interface components {
     schemas: {
         /** EchoRequest */
         EchoRequest: {
-            /** Message */
+            /**
+             * Message
+             * @description Message to echo back.
+             */
             message: string;
         };
         /** EchoResponse */
         EchoResponse: {
-            /** Message */
+            /**
+             * Message
+             * @description Original message.
+             */
             message: string;
-            /** Reversed */
+            /**
+             * Reversed
+             * @description Reversed message.
+             */
             reversed: string;
+        };
+        /**
+         * ErrorResponse
+         * @description Standard error envelope for auth routes.
+         */
+        ErrorResponse: {
+            /**
+             * Detail
+             * @description Error detail message or structured error payload.
+             */
+            detail: string | {
+                [key: string]: string;
+            };
         };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** HealthResponse */
+        HealthResponse: {
+            /**
+             * Status
+             * @description Health status string.
+             */
+            status: string;
+        };
+        /** HealthzResponse */
+        HealthzResponse: {
+            /**
+             * Status
+             * @description Health check status.
+             */
+            status: string;
+        };
         /** PasskeyAddFinishRequest */
         PasskeyAddFinishRequest: {
-            /** Credential */
+            /**
+             * Credential
+             * @description Browser PublicKeyCredential response as JSON.
+             */
             credential: {
                 [key: string]: unknown;
             };
-            /** Device Label */
+            /**
+             * Device Label
+             * @description Optional label for the device.
+             */
             device_label?: string | null;
-            /** Device Public Key Jwk */
+            /**
+             * Device Public Key Jwk
+             * @description Optional device public key in JWK format to bind a device identity.
+             */
             device_public_key_jwk?: {
                 [key: string]: unknown;
             } | null;
-            /** Flow Id */
+            /**
+             * Flow Id
+             * @description Flow ID returned by add/start.
+             */
             flow_id: string;
         };
         /** PasskeyAddStartResponse */
         PasskeyAddStartResponse: {
-            /** Flow Id */
+            /**
+             * Flow Id
+             * @description Server-generated flow ID for add passkey.
+             */
             flow_id: string;
-            /** Options */
+            /**
+             * Options
+             * @description PublicKeyCredentialCreationOptions payload as a JSON-safe dict.
+             */
             options: {
                 [key: string]: unknown;
             };
         };
         /** PasskeyFinishResponse */
         PasskeyFinishResponse: {
-            /** Device Id */
+            /**
+             * Device Id
+             * @description Device ID that starts with the d prefix, empty when no device key is bound.
+             */
             device_id: string;
-            /** Display Name */
+            /**
+             * Display Name
+             * @description Optional display name for the user, not set by default.
+             */
             display_name?: string | null;
-            /** Role */
+            /**
+             * Role
+             * @description Server-side role for the user.
+             */
             role: string;
-            /** User Id */
+            /**
+             * User Id
+             * @description User ID that starts with the u prefix.
+             */
             user_id: string;
         };
         /** PasskeyInfo */
@@ -317,74 +413,145 @@ export interface components {
             /**
              * Created At
              * Format: date-time
+             * @description Creation timestamp in UTC.
              */
             created_at: string;
-            /** Id */
+            /**
+             * Id
+             * @description Internal passkey ID that starts with the k prefix.
+             */
             id: string;
-            /** Label */
-            label: string | null;
-            /** Last Used At */
-            last_used_at: string | null;
-            /** Revoked At */
-            revoked_at: string | null;
+            /**
+             * Label
+             * @description Optional passkey nickname.
+             */
+            label?: string | null;
+            /**
+             * Last Used At
+             * @description Last successful use timestamp.
+             */
+            last_used_at?: string | null;
+            /**
+             * Revoked At
+             * @description Revocation timestamp, if revoked.
+             */
+            revoked_at?: string | null;
         };
         /** PasskeyListResponse */
         PasskeyListResponse: {
-            /** Passkeys */
+            /**
+             * Passkeys
+             * @description Passkeys for the current user.
+             */
             passkeys: components["schemas"]["PasskeyInfo"][];
         };
         /** PasskeyLoginFinishRequest */
         PasskeyLoginFinishRequest: {
-            /** Credential */
+            /**
+             * Credential
+             * @description Browser PublicKeyCredential response as JSON.
+             */
             credential: {
                 [key: string]: unknown;
             };
-            /** Device Label */
+            /**
+             * Device Label
+             * @description Optional label for the device.
+             */
             device_label?: string | null;
-            /** Device Public Key Jwk */
+            /**
+             * Device Public Key Jwk
+             * @description Optional device public key in JWK format to bind a device identity.
+             */
             device_public_key_jwk?: {
                 [key: string]: unknown;
             } | null;
-            /** Flow Id */
+            /**
+             * Flow Id
+             * @description Flow ID returned by login/start.
+             */
             flow_id: string;
         };
         /** PasskeyLoginStartResponse */
         PasskeyLoginStartResponse: {
-            /** Flow Id */
+            /**
+             * Flow Id
+             * @description Server-generated flow ID for login.
+             */
             flow_id: string;
-            /** Options */
+            /**
+             * Options
+             * @description PublicKeyCredentialRequestOptions payload as a JSON-safe dict.
+             */
             options: {
                 [key: string]: unknown;
             };
         };
         /** PasskeyRegisterFinishRequest */
         PasskeyRegisterFinishRequest: {
-            /** Credential */
+            /**
+             * Credential
+             * @description Browser PublicKeyCredential response as JSON.
+             */
             credential: {
                 [key: string]: unknown;
             };
-            /** Device Label */
+            /**
+             * Device Label
+             * @description Optional label for the device.
+             */
             device_label?: string | null;
-            /** Device Public Key Jwk */
+            /**
+             * Device Public Key Jwk
+             * @description Optional device public key in JWK format to bind a device identity.
+             */
             device_public_key_jwk?: {
                 [key: string]: unknown;
             } | null;
-            /** Flow Id */
+            /**
+             * Flow Id
+             * @description Flow ID returned by register/start.
+             */
             flow_id: string;
         };
         /** PasskeyRegisterStartResponse */
         PasskeyRegisterStartResponse: {
-            /** Flow Id */
+            /**
+             * Flow Id
+             * @description Server-generated flow ID for registration.
+             */
             flow_id: string;
-            /** Options */
+            /**
+             * Options
+             * @description PublicKeyCredentialCreationOptions payload as a JSON-safe dict.
+             */
             options: {
                 [key: string]: unknown;
             };
         };
+        /** PasskeyRevokeResponse */
+        PasskeyRevokeResponse: {
+            /**
+             * Message
+             * @description Status message for the revocation action.
+             */
+            message: string;
+        };
         /** PingResponse */
         PingResponse: {
-            /** Ok */
+            /**
+             * Ok
+             * @description True when the service is reachable.
+             */
             ok: boolean;
+        };
+        /** RootResponse */
+        RootResponse: {
+            /**
+             * Message
+             * @description Welcome message.
+             */
+            message: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -423,7 +590,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["RootResponse"];
                 };
             };
         };
@@ -447,7 +614,25 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PasskeyFinishResponse"];
+                };
+            };
+            /** @description Invalid or expired flow, or WebAuthn verification error. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing or invalid token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Validation Error */
@@ -479,6 +664,15 @@ export interface operations {
                     "application/json": components["schemas"]["PasskeyAddStartResponse"];
                 };
             };
+            /** @description Missing or invalid token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     login_finish_auth_passkey_login_finish_post: {
@@ -501,6 +695,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PasskeyFinishResponse"];
+                };
+            };
+            /** @description Invalid credentials, revoked passkey, or expired flow. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Validation Error */
@@ -556,6 +759,15 @@ export interface operations {
                     "application/json": components["schemas"]["PasskeyFinishResponse"];
                 };
             };
+            /** @description Invalid or expired flow, or invalid WebAuthn payload. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -585,6 +797,15 @@ export interface operations {
                     "application/json": components["schemas"]["PasskeyRegisterStartResponse"];
                 };
             };
+            /** @description Invalid request or WebAuthn configuration error. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     passkeys_list_auth_passkeys_get: {
@@ -603,6 +824,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PasskeyListResponse"];
+                };
+            };
+            /** @description Missing or invalid token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -624,7 +854,42 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PasskeyRevokeResponse"];
+                };
+            };
+            /** @description Missing or invalid token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Passkey not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Cannot revoke the last active passkey. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "code": "LAST_PASSKEY",
+                     *         "message": "Cannot revoke the last active passkey."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Validation Error */
@@ -700,12 +965,27 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
+            /** @description Event stream with chunk and done events. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
+                    "application/json": unknown;
+                    "text/event-stream": string;
+                };
+            };
+            /** @description Missing or invalid device JWT. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": "Missing token"
+                     *     }
+                     */
                     "application/json": unknown;
                 };
             };
@@ -726,7 +1006,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["HealthResponse"];
                 };
             };
         };
@@ -746,9 +1026,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": components["schemas"]["HealthzResponse"];
                 };
             };
         };

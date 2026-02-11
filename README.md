@@ -1,20 +1,17 @@
 # h4ckath0n
 
-Ship hackathon products fast, with secure-by-default auth, RBAC, Postgres readiness, and built-in LLM tooling.
+Ship hackathon products fast with a secure FastAPI bootstrap and passkey-first authentication.
 
-**h4ckath0n** is an opinionated Python library that makes it hard to accidentally ship insecure glue code during a hackathon.
+## What you get
 
-## What you get by default
-
-- **API**: FastAPI app bootstrap with OpenAPI docs
-- **Auth**: passkey (WebAuthn) registration and login – no passwords required
-- **AuthZ**: built-in RBAC with `user` and `admin` roles, plus scoped permissions – all enforced server-side from the database
-- **Database**: SQLAlchemy 2.x + Alembic, works with SQLite (zero-config dev) and Postgres (recommended for production)
-- **LLM**: built-in LLM client wrapper (OpenAI SDK) with safe defaults and redaction hooks
-- **Observability**: opt-in LangSmith / OpenTelemetry tracing with trace ID propagation
-- **Config**: environment-driven settings via pydantic-settings
-
-Password auth and Redis-based queues/caching are available as optional extras.
+- FastAPI app factory with passkey routes mounted by default
+- Device signed ES256 JWT authentication and server-side RBAC (user, admin, scopes)
+- SQLAlchemy 2.x models with automatic table creation on startup
+- LLM wrapper around the OpenAI SDK with timeouts and retries
+- Optional password auth extra for email and password flows
+- Optional Redis extra that only adds the dependency, no integration is provided yet
+- Trace ID middleware and LangSmith environment wiring via `init_observability`
+- Full stack scaffold CLI that produces an API and web template
 
 ## Installation
 
@@ -27,8 +24,8 @@ uv add h4ckath0n
 Optional extras:
 
 ```bash
-uv add "h4ckath0n[password]"  # Argon2-based password auth (off by default)
-uv add "h4ckath0n[redis]"     # Redis support
+uv add "h4ckath0n[password]"  # Argon2 based password auth
+uv add "h4ckath0n[redis]"     # Redis dependency only
 ```
 
 ### pip
@@ -37,7 +34,7 @@ uv add "h4ckath0n[redis]"     # Redis support
 pip install h4ckath0n
 ```
 
-## Scaffold a full-stack project
+## Scaffold a full stack project
 
 ```bash
 npx h4ckath0n my-app
@@ -57,38 +54,39 @@ Run:
 uv run uvicorn your_module:app --reload
 ```
 
-Open docs at `/docs` (Swagger UI). Passkey auth routes are mounted automatically.
+## OpenAPI docs
 
-## Auth: passkeys by default
+- Interactive docs live at `/docs` when the app is running.
+- Public routes like passkey start and finish work without auth.
+- Protected routes require an `Authorization: Bearer <device_jwt>` header that the web
+  template can mint after login.
 
-h4ckath0n uses **passkeys (WebAuthn)** as the default authentication method. No passwords, no email required.
+## Auth model
 
-### How it works
+### Passkeys by default
 
-1. **Register**: `POST /auth/passkey/register/start` → browser creates a passkey → `POST /auth/passkey/register/finish` → account created, device key bound.
-2. **Login**: `POST /auth/passkey/login/start` → browser signs with passkey → `POST /auth/passkey/login/finish` → user identified, device key bound. Username-less by default.
-3. **Add passkey**: authenticated users can add more passkeys via `POST /auth/passkey/add/start` + `POST /auth/passkey/add/finish`.
-4. **Revoke passkey**: `POST /auth/passkeys/{key_id}/revoke` – but **cannot revoke the last active passkey** (returns `LAST_PASSKEY` error).
+The default authentication path uses passkeys (WebAuthn). The core flows are:
 
-### Request authentication
+1. `POST /auth/passkey/register/start` and `POST /auth/passkey/register/finish`
+2. `POST /auth/passkey/login/start` and `POST /auth/passkey/login/finish`
+3. `POST /auth/passkey/add/start` and `POST /auth/passkey/add/finish` for adding devices
+4. `GET /auth/passkeys` and `POST /auth/passkeys/{key_id}/revoke` for management
 
-All API calls are authenticated via **device-signed ES256 JWTs**:
+### Device signed JWTs
 
-- Each browser generates a non-extractable P-256 keypair stored in IndexedDB
-- The public key is registered with the backend during login/registration
-- The client mints short-lived JWTs (15 min) signed with the device private key
-- JWTs are held in memory only – never `localStorage`, `sessionStorage`, or cookies
-- The JWT contains **no privilege claims** (no role, no scopes) – authorization is computed server-side from the database
+After login or registration, the client binds a device key and mints short lived ES256
+JWTs. The server uses the `kid` header to load the device public key and verifies the
+signature and `aud` claim. JWTs contain only identity and time claims, no roles or
+scopes.
 
 ### ID scheme
 
-- User IDs: 32-char base32 string starting with `u` (e.g., `u3mfgh7k2n4p5q6r7s8t9v0w1x2y3z4a`)
-- Internal key IDs: 32-char base32 string starting with `k`
-- The browser's WebAuthn `credentialId` is stored separately and used for signature verification.
+- User IDs are 32 characters and start with `u`
+- Passkey IDs are 32 characters and start with `k`
+- Device IDs are 32 characters and start with `d`
+- Password reset tokens use UUID hex, not the base32 scheme
 
-## Secure-by-default endpoint protection
-
-Protect an endpoint (requires a logged-in user):
+## Secure endpoint protection
 
 ```python
 from h4ckath0n import create_app
@@ -101,7 +99,7 @@ def me(user=require_user()):
     return {"id": user.id, "role": user.role}
 ```
 
-Admin-only endpoint:
+Admin only endpoint:
 
 ```python
 from h4ckath0n.auth import require_admin
@@ -111,7 +109,7 @@ def admin_dashboard(user=require_admin()):
     return {"ok": True}
 ```
 
-Scoped privileges (checked from user's DB record):
+Scoped permissions:
 
 ```python
 from h4ckath0n.auth import require_scopes
@@ -121,47 +119,55 @@ def refund(user=require_scopes("billing:refund")):
     return {"status": "queued"}
 ```
 
-## Auth routes
+## Password auth (optional)
 
-h4ckath0n mounts these routes by default:
+Password routes mount only when the password extra is installed and
+`H4CKATH0N_PASSWORD_AUTH_ENABLED=true`.
 
-### Passkey (default)
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/password-reset/request`
+- `POST /auth/password-reset/confirm`
 
-- `POST /auth/passkey/register/start` – begin passkey registration (creates account)
-- `POST /auth/passkey/register/finish` – complete registration (binds device key, returns user_id + device_id)
-- `POST /auth/passkey/login/start` – begin passkey login (username-less)
-- `POST /auth/passkey/login/finish` – complete login (binds device key, returns user_id + device_id)
-- `POST /auth/passkey/add/start` – begin adding a passkey (authenticated)
-- `POST /auth/passkey/add/finish` – complete adding a passkey (authenticated)
-- `GET /auth/passkeys` – list current user's passkeys (authenticated)
-- `POST /auth/passkeys/{key_id}/revoke` – revoke a passkey (authenticated, blocked if last)
+Password auth is only an identity bootstrap. It binds a device key but does not return
+access tokens, refresh tokens, or cookies.
 
-### Password auth (optional extra)
+## Configuration
 
-Only available when `h4ckath0n[password]` is installed AND `H4CKATH0N_PASSWORD_AUTH_ENABLED=true`:
+All settings use the `H4CKATH0N_` prefix unless noted.
 
-- `POST /auth/register` – create account with email + password, bind device key
-- `POST /auth/login` – authenticate with email + password, bind device key
-- `POST /auth/password-reset/request` – request password reset
-- `POST /auth/password-reset/confirm` – confirm password reset, bind device key
+| Variable | Default | Description |
+|---|---|---|
+| `H4CKATH0N_ENV` | `development` | `development` or `production` |
+| `H4CKATH0N_DATABASE_URL` | `sqlite:///./h4ckath0n.db` | SQLAlchemy connection string |
+| `H4CKATH0N_RP_ID` | `localhost` in development | WebAuthn relying party ID, required in production |
+| `H4CKATH0N_ORIGIN` | `http://localhost:8000` in development | WebAuthn origin, required in production |
+| `H4CKATH0N_WEBAUTHN_TTL_SECONDS` | `300` | WebAuthn challenge TTL in seconds |
+| `H4CKATH0N_USER_VERIFICATION` | `preferred` | WebAuthn user verification requirement |
+| `H4CKATH0N_ATTESTATION` | `none` | WebAuthn attestation preference |
+| `H4CKATH0N_PASSWORD_AUTH_ENABLED` | `false` | Enable password routes when the extra is installed |
+| `H4CKATH0N_PASSWORD_RESET_EXPIRE_MINUTES` | `30` | Password reset token expiry in minutes |
+| `H4CKATH0N_BOOTSTRAP_ADMIN_EMAILS` | `[]` | JSON list of emails that become admin on password signup |
+| `H4CKATH0N_FIRST_USER_IS_ADMIN` | `false` | First password signup becomes admin |
+| `OPENAI_API_KEY` | empty | OpenAI API key for the LLM wrapper |
+| `H4CKATH0N_OPENAI_API_KEY` | empty | Alternate OpenAI API key for the LLM wrapper |
 
-Password auth is an identity bootstrap method only. It proves who the user is so a device key can be bound. After binding, all API calls use device-signed ES256 JWTs. Password auth does **not** return access tokens, refresh tokens, or session cookies.
+In development, missing `RP_ID` and `ORIGIN` fall back to localhost defaults with
+warnings. In production, missing values raise a runtime error when passkey flows start.
 
-## Database
+## Postgres readiness and migrations
 
-Zero-config default: SQLite is used if no database URL is provided.
-
-To use Postgres (recommended for production):
+Set a Postgres database URL to run against Postgres:
 
 ```
 H4CKATH0N_DATABASE_URL=postgresql+psycopg://user:pass@host:5432/dbname
 ```
 
-The `psycopg[binary]` driver is included by default – no extra install needed.
+`create_app()` calls `Base.metadata.create_all` on startup. Alembic is installed as a
+dependency, but migration scaffolding is not generated for you. See
+`docs/database/migrations.md` for a safe workflow when you add migrations.
 
-## LLM
-
-h4ckath0n includes LLM tooling by default. Set `OPENAI_API_KEY` and use:
+## LLM usage
 
 ```python
 from h4ckath0n.llm import llm
@@ -174,75 +180,44 @@ resp = client.chat(
 print(resp.text)
 ```
 
-Fails gracefully with a clear error message when `OPENAI_API_KEY` is not set.
+The wrapper raises a `RuntimeError` if no API key is configured.
 
-## Configuration
+## Observability
 
-Everything is environment-driven (prefix `H4CKATH0N_`):
-
-| Variable | Default | Description |
-|---|---|---|
-| `H4CKATH0N_ENV` | `development` | `development` or `production` |
-| `H4CKATH0N_DATABASE_URL` | `sqlite:///./h4ckath0n.db` | Database connection string |
-| `H4CKATH0N_RP_ID` | `localhost` *(dev only)* | WebAuthn relying party ID (**required in production**) |
-| `H4CKATH0N_ORIGIN` | `http://localhost:8000` *(dev only)* | WebAuthn expected origin (**required in production**) |
-| `H4CKATH0N_WEBAUTHN_TTL_SECONDS` | `300` | Challenge expiry time (seconds) |
-| `H4CKATH0N_USER_VERIFICATION` | `preferred` | WebAuthn user verification requirement |
-| `H4CKATH0N_ATTESTATION` | `none` | WebAuthn attestation preference |
-| `H4CKATH0N_PASSWORD_AUTH_ENABLED` | `false` | Enable password auth routes (requires `[password]` extra) |
-| `H4CKATH0N_BOOTSTRAP_ADMIN_EMAILS` | `[]` | JSON list of emails that get admin role on registration |
-| `H4CKATH0N_FIRST_USER_IS_ADMIN` | `false` | First registered user becomes admin (dev convenience) |
-| `OPENAI_API_KEY` | — | OpenAI API key for the LLM module |
-
-In development mode, missing WebAuthn settings generate localhost defaults with warnings.
-In production mode, missing `RP_ID` and `ORIGIN` cause a hard error.
-
-## Observability (opt-in)
-
-Enable end-to-end tracing across FastAPI requests, LangGraph nodes, tool calls, and LLM calls.
-
-### Enable LangSmith tracing
-
-```
-LANGSMITH_TRACING=true
-LANGSMITH_API_KEY=...
-LANGSMITH_PROJECT=your-project-name
-```
-
-### Trace IDs
-
-When observability is enabled, h4ckath0n attaches `X-Trace-Id` to all responses:
+`init_observability(app)` adds an `X-Trace-Id` header to responses and can set
+LangSmith environment variables if `ObservabilitySettings.langsmith_tracing` is true.
+It does not instrument FastAPI, LangChain, or OpenAI calls by itself.
 
 ```python
 from h4ckath0n import create_app
-from h4ckath0n.obs import init_observability
+from h4ckath0n.obs import ObservabilitySettings, init_observability
 
 app = create_app()
-init_observability(app)
+init_observability(app, ObservabilitySettings(langsmith_tracing=True))
 ```
+
+## Compatibility and operational notes
+
+- Passkeys require HTTPS in production. `localhost` is allowed for development.
+- `H4CKATH0N_RP_ID` must match your production domain and `H4CKATH0N_ORIGIN` must
+  include the scheme and host.
+- The last active passkey cannot be revoked. Add a second passkey first.
 
 ## Development
 
 ```bash
 git clone https://github.com/BTreeMap/h4ckath0n.git
 cd h4ckath0n
-uv sync
-uv run pytest
+uv sync --locked --all-extras
 ```
 
 Quality gates:
 
 ```bash
-uv run ruff format --check .
-uv run ruff check .
-uv run mypy src
-uv run pytest
-```
-
-Build:
-
-```bash
-uv build
+uv run --locked ruff format --check .
+uv run --locked ruff check .
+uv run --locked mypy src
+uv run --locked pytest -v
 ```
 
 ## License
