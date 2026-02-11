@@ -409,7 +409,7 @@ jobs:
           echo "Pinning h4ckath0n==${EXPECTED_PYPI_VERSION}"
 
           for i in {1..60}; do
-            if uv add --no-sync "h4ckath0n==${EXPECTED_PYPI_VERSION}"; then
+            if uv add --no-cache --no-sync "h4ckath0n==${EXPECTED_PYPI_VERSION}"; then
               echo "Pinned OK on attempt ${i}"
               break
             fi
