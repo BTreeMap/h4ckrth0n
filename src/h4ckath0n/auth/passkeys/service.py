@@ -1,4 +1,4 @@
-"""Passkey (WebAuthn) business logic – challenge lifecycle, credential management."""
+"""Passkey (WebAuthn) business logic - challenge lifecycle, credential management."""
 
 from __future__ import annotations
 
@@ -63,7 +63,7 @@ async def _consume_flow(db: AsyncSession, flow: WebAuthnChallenge) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Registration (unauthenticated – creates a new account)
+# Registration (unauthenticated - creates a new account)
 # ---------------------------------------------------------------------------
 
 
@@ -71,7 +71,7 @@ async def start_registration(
     db: AsyncSession,
     settings: Settings,
 ) -> tuple[str, dict]:
-    """Begin passkey registration – create user + flow, return (flow_id, options_dict)."""
+    """Begin passkey registration - create user + flow, return (flow_id, options_dict)."""
     rp_id = settings.effective_rp_id()
     origin = settings.effective_origin()
 
@@ -111,7 +111,7 @@ async def finish_registration(
     credential_json: dict,
     settings: Settings,
 ) -> User:
-    """Complete passkey registration – verify attestation, store credential, return user."""
+    """Complete passkey registration - verify attestation, store credential, return user."""
     flow = await _get_valid_flow(db, flow_id, "register")
 
     challenge_bytes = base64url_to_bytes(flow.challenge)
@@ -145,7 +145,7 @@ async def finish_registration(
 
 
 # ---------------------------------------------------------------------------
-# Authentication (unauthenticated – username-less)
+# Authentication (unauthenticated - username-less)
 # ---------------------------------------------------------------------------
 
 
@@ -153,7 +153,7 @@ async def start_authentication(
     db: AsyncSession,
     settings: Settings,
 ) -> tuple[str, dict]:
-    """Begin passkey login – return (flow_id, options_dict)."""
+    """Begin passkey login - return (flow_id, options_dict)."""
     rp_id = settings.effective_rp_id()
     origin = settings.effective_origin()
 
@@ -185,7 +185,7 @@ async def finish_authentication(
     credential_json: dict,
     settings: Settings,
 ) -> User:
-    """Complete passkey login – verify assertion, update counters, return user."""
+    """Complete passkey login - verify assertion, update counters, return user."""
     flow = await _get_valid_flow(db, flow_id, "authenticate")
 
     raw_id = credential_json.get("rawId") or credential_json.get("id", "")
@@ -284,7 +284,7 @@ async def finish_add_credential(
     current_user: User,
     settings: Settings,
 ) -> WebAuthnCredential:
-    """Complete adding a passkey – verify attestation, store credential."""
+    """Complete adding a passkey - verify attestation, store credential."""
     flow = await _get_valid_flow(db, flow_id, "add_credential")
     if flow.user_id != current_user.id:
         raise ValueError("Flow does not belong to current user")
@@ -333,41 +333,50 @@ async def list_passkeys(db: AsyncSession, user: User) -> list[WebAuthnCredential
 async def revoke_passkey(db: AsyncSession, user: User, key_id: str) -> None:
     """Revoke a credential by its internal key id.
 
-    Raises ``LastPasskeyError`` if this is the user's last active passkey.
-    Uses ``with_for_update()`` for transactional safety in Postgres.
+    Raises LastPasskeyError if this is the user's last active passkey.
+
+    Concurrency and Postgres:
+    - Postgres forbids FOR UPDATE with aggregate functions like COUNT(*).
+    - To serialize "last passkey" checks, we use a per-user row lock on User.
+      That acts as a mutex for passkey mutations per user.
     """
-    result = await db.execute(
-        select(WebAuthnCredential).filter(
-            WebAuthnCredential.id == key_id,
-            WebAuthnCredential.user_id == user.id,
-        )
-    )
-    cred = result.scalars().first()
-    if cred is None:
-        raise ValueError("Credential not found")
-    if cred.revoked_at is not None:
-        raise ValueError("Credential already revoked")
+    try:
+        # Per-user mutex. In SQLite, FOR UPDATE is ignored (acceptable for dev/tests).
+        await db.execute(select(User.id).filter(User.id == user.id).with_for_update())
 
-    # Count active (non-revoked) passkeys with row-level locking for concurrency safety.
-    # For SQLite (dev), with_for_update is silently ignored which is acceptable.
-    count_result = await db.execute(
-        select(func.count())
-        .select_from(WebAuthnCredential)
-        .filter(
-            WebAuthnCredential.user_id == user.id,
-            WebAuthnCredential.revoked_at.is_(None),
+        result = await db.execute(
+            select(WebAuthnCredential).filter(
+                WebAuthnCredential.id == key_id,
+                WebAuthnCredential.user_id == user.id,
+            )
         )
-        .with_for_update()
-    )
-    active_count = count_result.scalar()
-    if active_count is not None and active_count <= 1:
-        raise LastPasskeyError(
-            "Cannot revoke the last active passkey. "
-            "Add another passkey via POST /auth/passkey/add/start first."
-        )
+        cred = result.scalars().first()
+        if cred is None:
+            raise ValueError("Credential not found")
+        if cred.revoked_at is not None:
+            raise ValueError("Credential already revoked")
 
-    cred.revoked_at = datetime.now(UTC)
-    await db.commit()
+        # Count active passkeys without FOR UPDATE (mutex is the User row lock above).
+        active_count = await db.scalar(
+            select(func.count())
+            .select_from(WebAuthnCredential)
+            .filter(
+                WebAuthnCredential.user_id == user.id,
+                WebAuthnCredential.revoked_at.is_(None),
+            )
+        )
+        if active_count is not None and int(active_count) <= 1:
+            raise LastPasskeyError(
+                "Cannot revoke the last active passkey. "
+                "Add another passkey via POST /auth/passkey/add/start first."
+            )
+
+        cred.revoked_at = datetime.now(UTC)
+        await db.commit()
+    except Exception:
+        # Ensure any open transaction is rolled back so row locks are released promptly.
+        await db.rollback()
+        raise
 
 
 # ---------------------------------------------------------------------------
