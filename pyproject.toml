@@ -27,6 +27,7 @@ dependencies = [
     "langsmith>=0.2",
     "sse-starlette>=2.0",
     "cryptography>=46.0.5",
+    "asyncpg>=0.31.0",
 ]
 
 [project.optional-dependencies]
