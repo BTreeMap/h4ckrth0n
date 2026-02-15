@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "API for {{PROJECT_NAME}}"
 requires-python = ">=3.11"
 dependencies = [
-    "h4ckath0n>=0.1.1",
+    "h4ckath0n>=0.1.2",
     "cryptography>=44.0",
 ]
 
