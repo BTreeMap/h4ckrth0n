@@ -22,6 +22,8 @@ from cryptography.hazmat.primitives.serialization import (
 )
 from fastapi.testclient import TestClient
 from jwt.algorithms import ECAlgorithm
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from h4ckath0n.app import create_app
 from h4ckath0n.auth.models import User, WebAuthnChallenge, WebAuthnCredential
@@ -60,22 +62,26 @@ def settings(tmp_path):
 
 
 @pytest.fixture()
-def app(settings):
-    return create_app(settings)
+async def app(settings):
+    application = create_app(settings)
+    async with application.state.async_engine.begin() as conn:
+        from h4ckath0n.db.base import Base
+
+        await conn.run_sync(Base.metadata.create_all)
+    yield application
+    await application.state.async_engine.dispose()
 
 
 @pytest.fixture()
 def client(app):
-    return TestClient(app)
+    with TestClient(app) as c:
+        yield c
 
 
 @pytest.fixture()
-def db_session(app):
-    session = app.state.session_factory()
-    try:
+async def db_session(app):
+    async with app.state.async_session_factory() as session:
         yield session
-    finally:
-        session.close()
 
 
 # ---------------------------------------------------------------------------
@@ -142,72 +148,80 @@ class TestIdGenerators:
 
 
 class TestFlowState:
-    def test_register_start_creates_flow(self, db_session, settings):
-        flow_id, options = start_registration(db_session, settings)
+    async def test_register_start_creates_flow(self, db_session: AsyncSession, settings):
+        flow_id, options = await start_registration(db_session, settings)
         assert flow_id
         assert "challenge" in options
-        flow = db_session.query(WebAuthnChallenge).filter_by(id=flow_id).first()
+        result = await db_session.execute(select(WebAuthnChallenge).filter_by(id=flow_id))
+        flow = result.scalars().first()
         assert flow is not None
         assert flow.kind == "register"
         assert flow.consumed_at is None
 
-    def test_register_start_creates_user(self, db_session, settings):
-        flow_id, _ = start_registration(db_session, settings)
-        flow = db_session.query(WebAuthnChallenge).filter_by(id=flow_id).first()
-        user = db_session.query(User).filter_by(id=flow.user_id).first()
+    async def test_register_start_creates_user(self, db_session: AsyncSession, settings):
+        flow_id, _ = await start_registration(db_session, settings)
+        result = await db_session.execute(select(WebAuthnChallenge).filter_by(id=flow_id))
+        flow = result.scalars().first()
+        result = await db_session.execute(select(User).filter_by(id=flow.user_id))
+        user = result.scalars().first()
         assert user is not None
         assert is_user_id(user.id)
 
-    def test_authentication_start_creates_flow(self, db_session, settings):
-        flow_id, options = start_authentication(db_session, settings)
+    async def test_authentication_start_creates_flow(self, db_session: AsyncSession, settings):
+        flow_id, options = await start_authentication(db_session, settings)
         assert flow_id
         assert "challenge" in options
-        flow = db_session.query(WebAuthnChallenge).filter_by(id=flow_id).first()
+        result = await db_session.execute(select(WebAuthnChallenge).filter_by(id=flow_id))
+        flow = result.scalars().first()
         assert flow is not None
         assert flow.kind == "authenticate"
         assert flow.user_id is None  # username-less
 
-    def test_expired_flow_rejected(self, db_session, settings):
+    async def test_expired_flow_rejected(self, db_session: AsyncSession, settings):
         from h4ckath0n.auth.passkeys.service import _get_valid_flow
 
-        flow_id, _ = start_registration(db_session, settings)
+        flow_id, _ = await start_registration(db_session, settings)
         # Manually expire the flow
-        flow = db_session.query(WebAuthnChallenge).filter_by(id=flow_id).first()
+        result = await db_session.execute(select(WebAuthnChallenge).filter_by(id=flow_id))
+        flow = result.scalars().first()
         flow.expires_at = datetime.now(UTC) - timedelta(minutes=1)
-        db_session.commit()
+        await db_session.commit()
 
         with pytest.raises(ValueError, match="expired"):
-            _get_valid_flow(db_session, flow_id, "register")
+            await _get_valid_flow(db_session, flow_id, "register")
 
-    def test_consumed_flow_rejected(self, db_session, settings):
+    async def test_consumed_flow_rejected(self, db_session: AsyncSession, settings):
         from h4ckath0n.auth.passkeys.service import _consume_flow, _get_valid_flow
 
-        flow_id, _ = start_registration(db_session, settings)
-        flow = db_session.query(WebAuthnChallenge).filter_by(id=flow_id).first()
-        _consume_flow(db_session, flow)
-        db_session.commit()
+        flow_id, _ = await start_registration(db_session, settings)
+        result = await db_session.execute(select(WebAuthnChallenge).filter_by(id=flow_id))
+        flow = result.scalars().first()
+        await _consume_flow(db_session, flow)
+        await db_session.commit()
 
         with pytest.raises(ValueError, match="consumed"):
-            _get_valid_flow(db_session, flow_id, "register")
+            await _get_valid_flow(db_session, flow_id, "register")
 
-    def test_flow_kind_mismatch_rejected(self, db_session, settings):
+    async def test_flow_kind_mismatch_rejected(self, db_session: AsyncSession, settings):
         from h4ckath0n.auth.passkeys.service import _get_valid_flow
 
-        flow_id, _ = start_registration(db_session, settings)
+        flow_id, _ = await start_registration(db_session, settings)
         with pytest.raises(ValueError, match="mismatch"):
-            _get_valid_flow(db_session, flow_id, "authenticate")
+            await _get_valid_flow(db_session, flow_id, "authenticate")
 
-    def test_cleanup_expired_challenges(self, db_session, settings):
-        flow_id, _ = start_registration(db_session, settings)
+    async def test_cleanup_expired_challenges(self, db_session: AsyncSession, settings):
+        flow_id, _ = await start_registration(db_session, settings)
         # Expire it
-        flow = db_session.query(WebAuthnChallenge).filter_by(id=flow_id).first()
+        result = await db_session.execute(select(WebAuthnChallenge).filter_by(id=flow_id))
+        flow = result.scalars().first()
         flow.expires_at = datetime.now(UTC) - timedelta(minutes=1)
-        db_session.commit()
+        await db_session.commit()
 
-        deleted = cleanup_expired_challenges(db_session)
+        deleted = await cleanup_expired_challenges(db_session)
         assert deleted >= 1
 
-        remaining = db_session.query(WebAuthnChallenge).filter_by(id=flow_id).first()
+        result = await db_session.execute(select(WebAuthnChallenge).filter_by(id=flow_id))
+        remaining = result.scalars().first()
         assert remaining is None
 
 
@@ -217,11 +231,11 @@ class TestFlowState:
 
 
 class TestLastPasskeyInvariant:
-    def _create_user_with_passkeys(self, db_session, count=1):
+    async def _create_user_with_passkeys(self, db_session: AsyncSession, count: int = 1):
         """Helper to create a user with *count* active passkeys."""
         user = User()
         db_session.add(user)
-        db_session.flush()
+        await db_session.flush()
 
         creds = []
         for i in range(count):
@@ -233,51 +247,51 @@ class TestLastPasskeyInvariant:
             )
             db_session.add(cred)
             creds.append(cred)
-        db_session.commit()
+        await db_session.commit()
         for c in creds:
-            db_session.refresh(c)
-        db_session.refresh(user)
+            await db_session.refresh(c)
+        await db_session.refresh(user)
         return user, creds
 
-    def test_revoke_only_credential_blocked(self, db_session):
-        user, creds = self._create_user_with_passkeys(db_session, count=1)
+    async def test_revoke_only_credential_blocked(self, db_session: AsyncSession):
+        user, creds = await self._create_user_with_passkeys(db_session, count=1)
         with pytest.raises(LastPasskeyError, match="last active passkey"):
-            revoke_passkey(db_session, user, creds[0].id)
+            await revoke_passkey(db_session, user, creds[0].id)
 
-    def test_revoke_one_of_two_allowed(self, db_session):
-        user, creds = self._create_user_with_passkeys(db_session, count=2)
-        revoke_passkey(db_session, user, creds[0].id)
+    async def test_revoke_one_of_two_allowed(self, db_session: AsyncSession):
+        user, creds = await self._create_user_with_passkeys(db_session, count=2)
+        await revoke_passkey(db_session, user, creds[0].id)
         # Credential should now be revoked
-        db_session.refresh(creds[0])
+        await db_session.refresh(creds[0])
         assert creds[0].revoked_at is not None
 
-    def test_revoke_down_to_one_then_blocked(self, db_session):
-        user, creds = self._create_user_with_passkeys(db_session, count=2)
-        revoke_passkey(db_session, user, creds[0].id)
+    async def test_revoke_down_to_one_then_blocked(self, db_session: AsyncSession):
+        user, creds = await self._create_user_with_passkeys(db_session, count=2)
+        await revoke_passkey(db_session, user, creds[0].id)
         # Now only one active – should block
         with pytest.raises(LastPasskeyError):
-            revoke_passkey(db_session, user, creds[1].id)
+            await revoke_passkey(db_session, user, creds[1].id)
 
-    def test_revoke_already_revoked_raises(self, db_session):
-        user, creds = self._create_user_with_passkeys(db_session, count=2)
-        revoke_passkey(db_session, user, creds[0].id)
+    async def test_revoke_already_revoked_raises(self, db_session: AsyncSession):
+        user, creds = await self._create_user_with_passkeys(db_session, count=2)
+        await revoke_passkey(db_session, user, creds[0].id)
         with pytest.raises(ValueError, match="already revoked"):
-            revoke_passkey(db_session, user, creds[0].id)
+            await revoke_passkey(db_session, user, creds[0].id)
 
-    def test_revoke_nonexistent_raises(self, db_session):
-        user, _ = self._create_user_with_passkeys(db_session, count=1)
+    async def test_revoke_nonexistent_raises(self, db_session: AsyncSession):
+        user, _ = await self._create_user_with_passkeys(db_session, count=1)
         with pytest.raises(ValueError, match="not found"):
-            revoke_passkey(db_session, user, "knonexistent00000000000000000000")
+            await revoke_passkey(db_session, user, "knonexistent00000000000000000000")
 
-    def test_revoke_other_users_credential_fails(self, db_session):
-        user1, creds1 = self._create_user_with_passkeys(db_session, count=2)
-        user2, creds2 = self._create_user_with_passkeys(db_session, count=2)
+    async def test_revoke_other_users_credential_fails(self, db_session: AsyncSession):
+        user1, creds1 = await self._create_user_with_passkeys(db_session, count=2)
+        user2, creds2 = await self._create_user_with_passkeys(db_session, count=2)
         with pytest.raises(ValueError, match="not found"):
-            revoke_passkey(db_session, user1, creds2[0].id)
+            await revoke_passkey(db_session, user1, creds2[0].id)
 
-    def test_list_passkeys(self, db_session):
-        user, creds = self._create_user_with_passkeys(db_session, count=3)
-        listed = list_passkeys(db_session, user)
+    async def test_list_passkeys(self, db_session: AsyncSession):
+        user, creds = await self._create_user_with_passkeys(db_session, count=3)
+        listed = await list_passkeys(db_session, user)
         assert len(listed) == 3
         assert all(is_key_id(c.id) for c in listed)
 
@@ -331,13 +345,17 @@ class TestPasskeyRoutes:
         r = client.post("/auth/passkey/add/start")
         assert r.status_code in (401, 403)
 
-    def test_register_start_creates_user_in_db(self, client: TestClient, db_session):
+    async def test_register_start_creates_user_in_db(
+        self, client: TestClient, db_session: AsyncSession
+    ):
         r = client.post("/auth/passkey/register/start")
         assert r.status_code == 200
         flow_id = r.json()["flow_id"]
-        flow = db_session.query(WebAuthnChallenge).filter_by(id=flow_id).first()
+        result = await db_session.execute(select(WebAuthnChallenge).filter_by(id=flow_id))
+        flow = result.scalars().first()
         assert flow is not None
-        user = db_session.query(User).filter_by(id=flow.user_id).first()
+        result = await db_session.execute(select(User).filter_by(id=flow.user_id))
+        user = result.scalars().first()
         assert user is not None
         assert is_user_id(user.id)
 
@@ -348,7 +366,9 @@ class TestPasskeyRoutes:
 
 
 class TestPasskeyRevokeRoute:
-    def _setup_user_with_device_token(self, client, db_session, settings, n_creds=2):
+    async def _setup_user_with_device_token(
+        self, client, db_session: AsyncSession, settings, n_creds=2
+    ):
         """Create a user with passkeys and a device-signed JWT.
 
         Returns (user, creds, token).
@@ -357,7 +377,7 @@ class TestPasskeyRevokeRoute:
 
         user = User()
         db_session.add(user)
-        db_session.flush()
+        await db_session.flush()
 
         creds = []
         for i in range(n_creds):
@@ -369,10 +389,10 @@ class TestPasskeyRevokeRoute:
             )
             db_session.add(cred)
             creds.append(cred)
-        db_session.commit()
+        await db_session.commit()
         for c in creds:
-            db_session.refresh(c)
-        db_session.refresh(user)
+            await db_session.refresh(c)
+        await db_session.refresh(user)
 
         # Create a device keypair and register it
         private_key = ec.generate_private_key(ec.SECP256R1())
@@ -380,7 +400,7 @@ class TestPasskeyRevokeRoute:
         public_key = private_key.public_key()
         jwk_dict = json.loads(ECAlgorithm(ECAlgorithm.SHA256).to_jwk(public_key))
 
-        device_id = register_device(db_session, user.id, jwk_dict, "test")
+        device_id = await register_device(db_session, user.id, jwk_dict, "test")
 
         now = datetime.now(UTC)
         token = pyjwt.encode(
@@ -396,16 +416,20 @@ class TestPasskeyRevokeRoute:
         )
         return user, creds, token
 
-    def test_revoke_one_of_two_via_route(self, client, db_session, settings):
-        user, creds, token = self._setup_user_with_device_token(client, db_session, settings, 2)
+    async def test_revoke_one_of_two_via_route(self, client, db_session, settings):
+        user, creds, token = await self._setup_user_with_device_token(
+            client, db_session, settings, 2
+        )
         r = client.post(
             f"/auth/passkeys/{creds[0].id}/revoke",
             headers={"Authorization": f"Bearer {token}"},
         )
         assert r.status_code == 200
 
-    def test_revoke_last_passkey_blocked_via_route(self, client, db_session, settings):
-        user, creds, token = self._setup_user_with_device_token(client, db_session, settings, 1)
+    async def test_revoke_last_passkey_blocked_via_route(self, client, db_session, settings):
+        user, creds, token = await self._setup_user_with_device_token(
+            client, db_session, settings, 1
+        )
         r = client.post(
             f"/auth/passkeys/{creds[0].id}/revoke",
             headers={"Authorization": f"Bearer {token}"},
@@ -414,8 +438,10 @@ class TestPasskeyRevokeRoute:
         body = r.json()
         assert body["detail"]["code"] == "LAST_PASSKEY"
 
-    def test_list_passkeys_via_route(self, client, db_session, settings):
-        user, creds, token = self._setup_user_with_device_token(client, db_session, settings, 3)
+    async def test_list_passkeys_via_route(self, client, db_session, settings):
+        user, creds, token = await self._setup_user_with_device_token(
+            client, db_session, settings, 3
+        )
         r = client.get(
             "/auth/passkeys",
             headers={"Authorization": f"Bearer {token}"},

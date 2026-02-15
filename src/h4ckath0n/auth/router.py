@@ -10,8 +10,10 @@ They do **not** return access/refresh tokens.
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from h4ckath0n.auth import schemas
 from h4ckath0n.auth.service import (
@@ -25,12 +27,9 @@ from h4ckath0n.auth.service import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-def _db_dep(request: Request):  # type: ignore[no-untyped-def]
-    db: Session = request.app.state.session_factory()
-    try:
+async def _db_dep(request: Request) -> AsyncGenerator[AsyncSession, None]:
+    async with request.app.state.async_session_factory() as db:
         yield db
-    finally:
-        db.close()
 
 
 # ---------------------------------------------------------------------------
@@ -57,13 +56,17 @@ def _password_router() -> APIRouter:
             }
         },
     )
-    def register(body: schemas.RegisterRequest, request: Request, db: Session = Depends(_db_dep)):
+    async def register(
+        body: schemas.RegisterRequest, request: Request, db: AsyncSession = Depends(_db_dep)
+    ):
         settings = request.app.state.settings
         try:
-            user = register_user(db, body.email, body.password, settings)
+            user = await register_user(db, body.email, body.password, settings)
         except ValueError as exc:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
-        device_id = register_device(db, user.id, body.device_public_key_jwk, body.device_label)
+        device_id = await register_device(
+            db, user.id, body.device_public_key_jwk, body.device_label
+        )
         return schemas.DeviceBindingResponse(user_id=user.id, device_id=device_id, role=user.role)
 
     @pw.post(
@@ -78,13 +81,17 @@ def _password_router() -> APIRouter:
             }
         },
     )
-    def login(body: schemas.LoginRequest, request: Request, db: Session = Depends(_db_dep)):
-        user = authenticate_user(db, body.email, body.password)
+    async def login(
+        body: schemas.LoginRequest, request: Request, db: AsyncSession = Depends(_db_dep)
+    ):
+        user = await authenticate_user(db, body.email, body.password)
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
             )
-        device_id = register_device(db, user.id, body.device_public_key_jwk, body.device_label)
+        device_id = await register_device(
+            db, user.id, body.device_public_key_jwk, body.device_label
+        )
         return schemas.DeviceBindingResponse(user_id=user.id, device_id=device_id, role=user.role)
 
     @pw.post(
@@ -96,13 +103,13 @@ def _password_router() -> APIRouter:
             "even when the email is unknown."
         ),
     )
-    def password_reset_request(
+    async def password_reset_request(
         body: schemas.PasswordResetRequestSchema,
         request: Request,
-        db: Session = Depends(_db_dep),
+        db: AsyncSession = Depends(_db_dep),
     ):
         settings = request.app.state.settings
-        create_password_reset_token(
+        await create_password_reset_token(
             db, body.email, expire_minutes=settings.password_reset_expire_minutes
         )
         return schemas.MessageResponse(
@@ -123,15 +130,17 @@ def _password_router() -> APIRouter:
             }
         },
     )
-    def password_reset_confirm(
+    async def password_reset_confirm(
         body: schemas.PasswordResetConfirmSchema,
-        db: Session = Depends(_db_dep),
+        db: AsyncSession = Depends(_db_dep),
     ):
         try:
-            user = confirm_password_reset(db, body.token, body.new_password)
+            user = await confirm_password_reset(db, body.token, body.new_password)
         except ValueError as exc:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
-        device_id = register_device(db, user.id, body.device_public_key_jwk, body.device_label)
+        device_id = await register_device(
+            db, user.id, body.device_public_key_jwk, body.device_label
+        )
         return schemas.DeviceBindingResponse(user_id=user.id, device_id=device_id, role=user.role)
 
     return pw

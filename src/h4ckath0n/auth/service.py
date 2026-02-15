@@ -11,7 +11,8 @@ import json
 import secrets
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from h4ckath0n.auth.models import Device, PasswordResetToken, User
 from h4ckath0n.config import Settings
@@ -34,42 +35,45 @@ def _require_password_extra() -> tuple:  # type: ignore[type-arg]
         ) from exc
 
 
-def _is_bootstrap_admin(email: str, settings: Settings, db: Session) -> bool:
+async def _is_bootstrap_admin(email: str, settings: Settings, db: AsyncSession) -> bool:
     """Decide whether a newly-registered user should be admin."""
     if email in settings.bootstrap_admin_emails:
         return True
     if settings.first_user_is_admin:
-        count = db.query(User).count()
+        result = await db.execute(select(func.count()).select_from(User))
+        count = result.scalar()
         if count == 0:
             return True
     return False
 
 
-def register_user(
-    db: Session,
+async def register_user(
+    db: AsyncSession,
     email: str,
     password: str,
     settings: Settings,
 ) -> User:
     hash_password, _verify = _require_password_extra()
-    existing = db.query(User).filter(User.email == email).first()
+    result = await db.execute(select(User).filter(User.email == email))
+    existing = result.scalars().first()
     if existing:
         raise ValueError("Email already registered")
-    role = "admin" if _is_bootstrap_admin(email, settings, db) else "user"
+    role = "admin" if await _is_bootstrap_admin(email, settings, db) else "user"
     user = User(
         email=email,
         password_hash=hash_password(password),
         role=role,
     )
     db.add(user)
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
     return user
 
 
-def authenticate_user(db: Session, email: str, password: str) -> User | None:
+async def authenticate_user(db: AsyncSession, email: str, password: str) -> User | None:
     _hash, verify_password = _require_password_extra()
-    user = db.query(User).filter(User.email == email).first()
+    result = await db.execute(select(User).filter(User.email == email))
+    user = result.scalars().first()
     if user is None:
         return None
     if not user.password_hash:
@@ -97,8 +101,8 @@ def _jwk_fingerprint(jwk: dict) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
-def register_device(
-    db: Session,
+async def register_device(
+    db: AsyncSession,
     user_id: str,
     public_key_jwk: dict | None,
     label: str | None = None,
@@ -113,7 +117,8 @@ def register_device(
         return ""
     fp = _jwk_fingerprint(public_key_jwk)
 
-    existing = db.query(Device).filter(Device.fingerprint == fp).first()
+    result = await db.execute(select(Device).filter(Device.fingerprint == fp))
+    existing = result.scalars().first()
     if existing:
         return existing.id
 
@@ -124,18 +129,19 @@ def register_device(
         label=label,
     )
     db.add(device)
-    db.commit()
-    db.refresh(device)
+    await db.commit()
+    await db.refresh(device)
     return device.id
 
 
-def create_password_reset_token(
-    db: Session,
+async def create_password_reset_token(
+    db: AsyncSession,
     email: str,
     expire_minutes: int = 30,
 ) -> str | None:
     """Create a password reset token. Returns raw token or None if email unknown."""
-    user = db.query(User).filter(User.email == email).first()
+    result = await db.execute(select(User).filter(User.email == email))
+    user = result.scalars().first()
     if user is None:
         return None
     raw = secrets.token_urlsafe(48)
@@ -145,30 +151,30 @@ def create_password_reset_token(
         expires_at=datetime.now(UTC) + timedelta(minutes=expire_minutes),
     )
     db.add(prt)
-    db.commit()
+    await db.commit()
     return raw
 
 
-def confirm_password_reset(db: Session, raw_token: str, new_password: str) -> User:
+async def confirm_password_reset(db: AsyncSession, raw_token: str, new_password: str) -> User:
     """Confirm a password reset and return the user."""
     hash_password, _verify = _require_password_extra()
     hashed = _hash_token(raw_token)
-    prt = (
-        db.query(PasswordResetToken)
-        .filter(
+    prt_result = await db.execute(
+        select(PasswordResetToken).filter(
             PasswordResetToken.token_hash == hashed,
             PasswordResetToken.used.is_(False),
         )
-        .first()
     )
+    prt = prt_result.scalars().first()
     if prt is None:
         raise ValueError("Invalid or already-used reset token")
     if prt.expires_at.replace(tzinfo=UTC) < datetime.now(UTC):
         raise ValueError("Reset token expired")
     prt.used = True
-    user = db.query(User).filter(User.id == prt.user_id).first()
+    user_result = await db.execute(select(User).filter(User.id == prt.user_id))
+    user = user_result.scalars().first()
     if user is None:
         raise ValueError("User not found")
     user.password_hash = hash_password(new_password)
-    db.commit()
+    await db.commit()
     return user

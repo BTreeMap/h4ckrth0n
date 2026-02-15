@@ -15,6 +15,8 @@ from cryptography.hazmat.primitives.serialization import (
 )
 from fastapi.testclient import TestClient
 from jwt.algorithms import ECAlgorithm
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from h4ckath0n.app import create_app
 from h4ckath0n.auth.models import PasswordResetToken, User
@@ -71,22 +73,26 @@ def settings(tmp_path):
 
 
 @pytest.fixture()
-def app(settings):
-    return create_app(settings)
+async def app(settings):
+    application = create_app(settings)
+    async with application.state.async_engine.begin() as conn:
+        from h4ckath0n.db.base import Base
+
+        await conn.run_sync(Base.metadata.create_all)
+    yield application
+    await application.state.async_engine.dispose()
 
 
 @pytest.fixture()
 def client(app):
-    return TestClient(app)
+    with TestClient(app) as c:
+        yield c
 
 
 @pytest.fixture()
-def db_session(app):
-    session = app.state.session_factory()
-    try:
+async def db_session(app):
+    async with app.state.async_session_factory() as session:
         yield session
-    finally:
-        session.close()
 
 
 def _register_user_with_device(
@@ -250,7 +256,7 @@ class TestProtectedEndpoint:
 
 
 class TestAdminGate:
-    def test_non_admin_rejected(self, client: TestClient, app, db_session):
+    async def test_non_admin_rejected(self, client: TestClient, app, db_session):
         from h4ckath0n.auth import require_admin
 
         @app.get("/admin-only")
@@ -264,7 +270,7 @@ class TestAdminGate:
         r = client.get("/admin-only", headers={"Authorization": f"Bearer {token}"})
         assert r.status_code == 403
 
-    def test_admin_accepted(self, client: TestClient, app, db_session):
+    async def test_admin_accepted(self, client: TestClient, app, db_session: AsyncSession):
         from h4ckath0n.auth import require_admin
 
         @app.get("/admin-only2")
@@ -275,9 +281,10 @@ class TestAdminGate:
             client, db_session, "grace@example.com", "strongP@ss1"
         )
         # Promote to admin directly in DB
-        user = db_session.query(User).filter(User.email == "grace@example.com").first()
+        result = await db_session.execute(select(User).filter(User.email == "grace@example.com"))
+        user = result.scalars().first()
         user.role = "admin"
-        db_session.commit()
+        await db_session.commit()
 
         token = _make_device_token(user_id, device_id, private_pem)
         r = client.get("/admin-only2", headers={"Authorization": f"Bearer {token}"})
@@ -304,7 +311,7 @@ class TestScopeGate:
         r = client.post("/billing/refund", headers={"Authorization": f"Bearer {token}"})
         assert r.status_code == 403
 
-    def test_present_scope_accepted(self, client: TestClient, app, db_session):
+    async def test_present_scope_accepted(self, client: TestClient, app, db_session: AsyncSession):
         from h4ckath0n.auth import require_scopes
 
         @app.post("/billing/refund2")
@@ -314,9 +321,10 @@ class TestScopeGate:
         user_id, device_id, private_pem = _register_user_with_device(
             client, db_session, "ivan@example.com", "strongP@ss1"
         )
-        user = db_session.query(User).filter(User.email == "ivan@example.com").first()
+        result = await db_session.execute(select(User).filter(User.email == "ivan@example.com"))
+        user = result.scalars().first()
         user.scopes = "billing:refund"
-        db_session.commit()
+        await db_session.commit()
 
         token = _make_device_token(user_id, device_id, private_pem)
         r = client.post("/billing/refund2", headers={"Authorization": f"Bearer {token}"})
@@ -352,7 +360,7 @@ class TestPasswordReset:
         )
         assert r.status_code == 200
 
-    def test_full_reset_flow(self, client: TestClient, db_session):
+    async def test_full_reset_flow(self, client: TestClient, db_session: AsyncSession):
         _private_pem, public_jwk = _create_device_keypair()
         client.post(
             "/auth/register",
@@ -369,7 +377,7 @@ class TestPasswordReset:
         )
         from h4ckath0n.auth.service import create_password_reset_token
 
-        raw = create_password_reset_token(db_session, "luna@example.com")
+        raw = await create_password_reset_token(db_session, "luna@example.com")
         assert raw is not None
 
         new_pem, new_jwk = _create_device_keypair()
@@ -401,7 +409,7 @@ class TestPasswordReset:
         )
         assert r3.status_code == 200
 
-    def test_single_use(self, client: TestClient, db_session):
+    async def test_single_use(self, client: TestClient, db_session: AsyncSession):
         _p, jwk = _create_device_keypair()
         client.post(
             "/auth/register",
@@ -413,7 +421,7 @@ class TestPasswordReset:
         )
         from h4ckath0n.auth.service import create_password_reset_token
 
-        raw = create_password_reset_token(db_session, "mike@example.com")
+        raw = await create_password_reset_token(db_session, "mike@example.com")
         assert raw is not None
 
         # Use once
@@ -430,7 +438,7 @@ class TestPasswordReset:
         )
         assert r2.status_code == 400
 
-    def test_expired_token_rejected(self, client: TestClient, db_session):
+    async def test_expired_token_rejected(self, client: TestClient, db_session: AsyncSession):
         _p, jwk = _create_device_keypair()
         client.post(
             "/auth/register",
@@ -442,16 +450,15 @@ class TestPasswordReset:
         )
         from h4ckath0n.auth.service import create_password_reset_token
 
-        raw = create_password_reset_token(db_session, "nancy@example.com", expire_minutes=30)
+        raw = await create_password_reset_token(db_session, "nancy@example.com", expire_minutes=30)
         assert raw is not None
         # Manually expire the token
-        prt = (
-            db_session.query(PasswordResetToken)
-            .filter(PasswordResetToken.token_hash == _hash_token(raw))
-            .first()
+        result = await db_session.execute(
+            select(PasswordResetToken).filter(PasswordResetToken.token_hash == _hash_token(raw))
         )
+        prt = result.scalars().first()
         prt.expires_at = datetime.now(UTC) - timedelta(minutes=1)
-        db_session.commit()
+        await db_session.commit()
 
         r = client.post(
             "/auth/password-reset/confirm",
@@ -466,7 +473,7 @@ class TestPasswordReset:
 
 
 class TestBootstrapAdmin:
-    def test_first_user_admin(self, tmp_path):
+    async def test_first_user_admin(self, tmp_path):
         db_path = tmp_path / "admin_test.db"
         s = Settings(
             database_url=f"sqlite:///{db_path}",
@@ -474,24 +481,26 @@ class TestBootstrapAdmin:
             password_auth_enabled=True,
         )
         app = create_app(s)
-        c = TestClient(app)
-        _p, jwk = _create_device_keypair()
-        reg = c.post(
-            "/auth/register",
-            json={
-                "email": "first@example.com",
-                "password": "P@ss1",
-                "device_public_key_jwk": jwk,
-            },
-        )
-        assert reg.status_code == 201
-        # Verify role in DB
-        session = app.state.session_factory()
-        user = session.query(User).filter(User.email == "first@example.com").first()
-        assert user.role == "admin"
-        session.close()
+        with TestClient(app) as c:
+            _p, jwk = _create_device_keypair()
+            reg = c.post(
+                "/auth/register",
+                json={
+                    "email": "first@example.com",
+                    "password": "P@ss1",
+                    "device_public_key_jwk": jwk,
+                },
+            )
+            assert reg.status_code == 201
+            # Verify role in DB
+            async with app.state.async_session_factory() as session:
+                result = await session.execute(
+                    select(User).filter(User.email == "first@example.com")
+                )
+                user = result.scalars().first()
+                assert user.role == "admin"
 
-    def test_bootstrap_admin_emails(self, tmp_path):
+    async def test_bootstrap_admin_emails(self, tmp_path):
         db_path = tmp_path / "admin_test2.db"
         s = Settings(
             database_url=f"sqlite:///{db_path}",
@@ -499,31 +508,36 @@ class TestBootstrapAdmin:
             password_auth_enabled=True,
         )
         app = create_app(s)
-        c = TestClient(app)
-        _p1, jwk1 = _create_device_keypair()
-        c.post(
-            "/auth/register",
-            json={
-                "email": "regular@example.com",
-                "password": "P@ss1",
-                "device_public_key_jwk": jwk1,
-            },
-        )
-        _p2, jwk2 = _create_device_keypair()
-        c.post(
-            "/auth/register",
-            json={
-                "email": "boss@example.com",
-                "password": "P@ss1",
-                "device_public_key_jwk": jwk2,
-            },
-        )
-        session = app.state.session_factory()
-        regular = session.query(User).filter(User.email == "regular@example.com").first()
-        boss = session.query(User).filter(User.email == "boss@example.com").first()
-        assert regular.role == "user"
-        assert boss.role == "admin"
-        session.close()
+        with TestClient(app) as c:
+            _p1, jwk1 = _create_device_keypair()
+            c.post(
+                "/auth/register",
+                json={
+                    "email": "regular@example.com",
+                    "password": "P@ss1",
+                    "device_public_key_jwk": jwk1,
+                },
+            )
+            _p2, jwk2 = _create_device_keypair()
+            c.post(
+                "/auth/register",
+                json={
+                    "email": "boss@example.com",
+                    "password": "P@ss1",
+                    "device_public_key_jwk": jwk2,
+                },
+            )
+            async with app.state.async_session_factory() as session:
+                result = await session.execute(
+                    select(User).filter(User.email == "regular@example.com")
+                )
+                regular = result.scalars().first()
+                result = await session.execute(
+                    select(User).filter(User.email == "boss@example.com")
+                )
+                boss = result.scalars().first()
+                assert regular.role == "user"
+                assert boss.role == "admin"
 
 
 # ---------------------------------------------------------------------------
@@ -541,9 +555,9 @@ class TestObservability:
         )
         app = create_app(s)
         init_observability(app, ObservabilitySettings())
-        c = TestClient(app)
-        r = c.get("/health")
-        assert "x-trace-id" in r.headers
+        with TestClient(app) as c:
+            r = c.get("/health")
+            assert "x-trace-id" in r.headers
 
     def test_redact_headers(self):
         from h4ckath0n.obs.redaction import redact_headers
