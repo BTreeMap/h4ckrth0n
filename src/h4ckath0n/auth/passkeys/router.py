@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from h4ckath0n.auth import schemas as auth_schemas
 from h4ckath0n.auth.dependencies import _get_current_user
@@ -26,16 +28,13 @@ router = APIRouter(prefix="/auth/passkey", tags=["passkey"])
 
 
 # ---------------------------------------------------------------------------
-# DB dependency (same pattern as main auth router)
+# DB dependency (async)
 # ---------------------------------------------------------------------------
 
 
-def _db_dep(request: Request):  # type: ignore[no-untyped-def]
-    db: Session = request.app.state.session_factory()
-    try:
+async def _db_dep(request: Request) -> AsyncGenerator[AsyncSession, None]:
+    async with request.app.state.async_session_factory() as db:
         yield db
-    finally:
-        db.close()
 
 
 # ---------------------------------------------------------------------------
@@ -58,9 +57,9 @@ def _db_dep(request: Request):  # type: ignore[no-untyped-def]
         }
     },
 )
-def register_start(request: Request, db: Session = Depends(_db_dep)):
+async def register_start(request: Request, db: AsyncSession = Depends(_db_dep)):
     settings = request.app.state.settings
-    flow_id, options = start_registration(db, settings)
+    flow_id, options = await start_registration(db, settings)
     return schemas.PasskeyRegisterStartResponse(flow_id=flow_id, options=options)
 
 
@@ -80,18 +79,18 @@ def register_start(request: Request, db: Session = Depends(_db_dep)):
         }
     },
 )
-def register_finish(
+async def register_finish(
     body: schemas.PasskeyRegisterFinishRequest,
     request: Request,
-    db: Session = Depends(_db_dep),
+    db: AsyncSession = Depends(_db_dep),
 ):
     settings = request.app.state.settings
     try:
-        user = finish_registration(db, body.flow_id, body.credential, settings)
+        user = await finish_registration(db, body.flow_id, body.credential, settings)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
 
-    device_id = register_device(db, user.id, body.device_public_key_jwk, body.device_label)
+    device_id = await register_device(db, user.id, body.device_public_key_jwk, body.device_label)
 
     return schemas.PasskeyFinishResponse(user_id=user.id, device_id=device_id, role=user.role)
 
@@ -109,9 +108,9 @@ def register_finish(
         "Begin a username-less passkey login ceremony and return WebAuthn authentication options."
     ),
 )
-def login_start(request: Request, db: Session = Depends(_db_dep)):
+async def login_start(request: Request, db: AsyncSession = Depends(_db_dep)):
     settings = request.app.state.settings
-    flow_id, options = start_authentication(db, settings)
+    flow_id, options = await start_authentication(db, settings)
     return schemas.PasskeyLoginStartResponse(flow_id=flow_id, options=options)
 
 
@@ -130,18 +129,18 @@ def login_start(request: Request, db: Session = Depends(_db_dep)):
         }
     },
 )
-def login_finish(
+async def login_finish(
     body: schemas.PasskeyLoginFinishRequest,
     request: Request,
-    db: Session = Depends(_db_dep),
+    db: AsyncSession = Depends(_db_dep),
 ):
     settings = request.app.state.settings
     try:
-        user = finish_authentication(db, body.flow_id, body.credential, settings)
+        user = await finish_authentication(db, body.flow_id, body.credential, settings)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from None
 
-    device_id = register_device(db, user.id, body.device_public_key_jwk, body.device_label)
+    device_id = await register_device(db, user.id, body.device_public_key_jwk, body.device_label)
 
     return schemas.PasskeyFinishResponse(user_id=user.id, device_id=device_id, role=user.role)
 
@@ -162,13 +161,13 @@ def login_finish(
         401: {"model": auth_schemas.ErrorResponse, "description": "Missing or invalid token."}
     },
 )
-def add_start(
+async def add_start(
     request: Request,
     user: User = Depends(_get_current_user),
-    db: Session = Depends(_db_dep),
+    db: AsyncSession = Depends(_db_dep),
 ):
     settings = request.app.state.settings
-    flow_id, options = start_add_credential(db, user, settings)
+    flow_id, options = await start_add_credential(db, user, settings)
     return schemas.PasskeyAddStartResponse(flow_id=flow_id, options=options)
 
 
@@ -186,19 +185,19 @@ def add_start(
         401: {"model": auth_schemas.ErrorResponse, "description": "Missing or invalid token."},
     },
 )
-def add_finish(
+async def add_finish(
     body: schemas.PasskeyAddFinishRequest,
     request: Request,
     user: User = Depends(_get_current_user),
-    db: Session = Depends(_db_dep),
+    db: AsyncSession = Depends(_db_dep),
 ):
     settings = request.app.state.settings
     try:
-        finish_add_credential(db, body.flow_id, body.credential, user, settings)
+        await finish_add_credential(db, body.flow_id, body.credential, user, settings)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
 
-    device_id = register_device(db, user.id, body.device_public_key_jwk, body.device_label)
+    device_id = await register_device(db, user.id, body.device_public_key_jwk, body.device_label)
 
     return schemas.PasskeyFinishResponse(user_id=user.id, device_id=device_id, role=user.role)
 
@@ -219,12 +218,12 @@ passkeys_router = APIRouter(prefix="/auth/passkeys", tags=["passkey"])
         401: {"model": auth_schemas.ErrorResponse, "description": "Missing or invalid token."}
     },
 )
-def passkeys_list(
+async def passkeys_list(
     request: Request,
     user: User = Depends(_get_current_user),
-    db: Session = Depends(_db_dep),
+    db: AsyncSession = Depends(_db_dep),
 ):
-    creds = list_passkeys(db, user)
+    creds = await list_passkeys(db, user)
     items = [
         schemas.PasskeyInfo(
             id=c.id,
@@ -265,14 +264,14 @@ def passkeys_list(
         },
     },
 )
-def passkey_revoke(
+async def passkey_revoke(
     key_id: str,
     request: Request,
     user: User = Depends(_get_current_user),
-    db: Session = Depends(_db_dep),
+    db: AsyncSession = Depends(_db_dep),
 ):
     try:
-        revoke_passkey(db, user, key_id)
+        await revoke_passkey(db, user, key_id)
     except LastPasskeyError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

@@ -15,7 +15,8 @@ import jwt
 from cryptography.hazmat.primitives import serialization
 from fastapi import WebSocket
 from jwt.algorithms import ECAlgorithm
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
 from h4ckath0n.auth.jwt import decode_device_token, get_unverified_kid
@@ -50,15 +51,11 @@ class AuthError(Exception):
         super().__init__(detail)
 
 
-def _get_db(app_state: object) -> Session:
-    return app_state.session_factory()  # type: ignore[attr-defined, no-any-return]
-
-
-def verify_device_jwt(
+async def verify_device_jwt(
     raw_jwt: str,
     *,
     expected_aud: str,
-    db: Session,
+    db: AsyncSession,
 ) -> AuthContext:
     """Verify a device-signed ES256 JWT and enforce ``aud`` binding.
 
@@ -69,7 +66,7 @@ def verify_device_jwt(
     expected_aud:
         Required ``aud`` value (``AUD_HTTP``, ``AUD_WS`` or ``AUD_SSE``).
     db:
-        An open SQLAlchemy session.
+        An open SQLAlchemy async session.
 
     Returns
     -------
@@ -85,7 +82,8 @@ def verify_device_jwt(
     if not kid:
         raise AuthError("Missing kid in JWT header")
 
-    device = db.query(Device).filter(Device.id == kid).first()
+    result = await db.execute(select(Device).filter(Device.id == kid))
+    device = result.scalars().first()
     if not device:
         raise AuthError("Unknown device")
 
@@ -116,7 +114,8 @@ def verify_device_jwt(
         raise AuthError(f"Invalid aud: expected {expected_aud}")
 
     # ── user lookup ───────────────────────────────────────────────────
-    user = db.query(User).filter(User.id == claims.sub).first()
+    result = await db.execute(select(User).filter(User.id == claims.sub))
+    user = result.scalars().first()
     if user is None:
         raise AuthError("User not found")
 
@@ -126,7 +125,7 @@ def verify_device_jwt(
 # ── Transport helpers ─────────────────────────────────────────────────────
 
 
-def authenticate_http_request(request: Request) -> AuthContext:
+async def authenticate_http_request(request: Request) -> AuthContext:
     """Authenticate an HTTP request using ``Authorization: Bearer <jwt>``.
 
     Enforces ``aud = h4ckath0n:http``.
@@ -136,14 +135,11 @@ def authenticate_http_request(request: Request) -> AuthContext:
         raise AuthError("Missing Authorization header")
     raw_jwt = auth_header[7:]
 
-    db: Session = _get_db(request.app.state)
-    try:
-        return verify_device_jwt(raw_jwt, expected_aud=AUD_HTTP, db=db)
-    finally:
-        db.close()
+    async with request.app.state.async_session_factory() as db:
+        return await verify_device_jwt(raw_jwt, expected_aud=AUD_HTTP, db=db)
 
 
-def authenticate_sse_request(request: Request) -> AuthContext:
+async def authenticate_sse_request(request: Request) -> AuthContext:
     """Authenticate an SSE request using ``Authorization: Bearer <jwt>``.
 
     Enforces ``aud = h4ckath0n:sse``.  Falls back to ``?token=`` query
@@ -157,11 +153,8 @@ def authenticate_sse_request(request: Request) -> AuthContext:
     if not raw_jwt:
         raise AuthError("Missing token")
 
-    db: Session = _get_db(request.app.state)
-    try:
-        return verify_device_jwt(raw_jwt, expected_aud=AUD_SSE, db=db)
-    finally:
-        db.close()
+    async with request.app.state.async_session_factory() as db:
+        return await verify_device_jwt(raw_jwt, expected_aud=AUD_SSE, db=db)
 
 
 async def authenticate_websocket(websocket: WebSocket) -> AuthContext:
@@ -176,8 +169,5 @@ async def authenticate_websocket(websocket: WebSocket) -> AuthContext:
     if not raw_jwt:
         raise AuthError("Missing token")
 
-    db: Session = _get_db(websocket.app.state)
-    try:
-        return verify_device_jwt(raw_jwt, expected_aud=AUD_WS, db=db)
-    finally:
-        db.close()
+    async with websocket.app.state.async_session_factory() as db:
+        return await verify_device_jwt(raw_jwt, expected_aud=AUD_WS, db=db)
