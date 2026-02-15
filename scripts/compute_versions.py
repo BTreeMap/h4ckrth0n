@@ -10,9 +10,7 @@ import tomllib
 from datetime import UTC, datetime
 from pathlib import Path
 
-SEMVER_TAG = re.compile(
-    r"^v(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)$"
-)
+SEMVER_TAG = re.compile(r"^v(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)$")
 
 
 def read_pyproject_version(path: Path) -> str:
@@ -71,9 +69,7 @@ def determine_channel(channel: str | None) -> str:
 
 def base_version_from_files(root: Path) -> tuple[int, int, int]:
     pyproject_version = read_pyproject_version(root / "pyproject.toml")
-    package_version = read_package_version(
-        root / "packages" / "create-h4ckath0n" / "package.json"
-    )
+    package_version = read_package_version(root / "packages" / "create-h4ckath0n" / "package.json")
     if pyproject_version != package_version:
         raise ValueError(
             "pyproject.toml and package.json versions do not match: "
@@ -122,9 +118,7 @@ def compute_versions(channel: str, root: Path) -> dict[str, str]:
     else:
         sha = os.environ.get("GITHUB_SHA")
         if not sha:
-            sha = subprocess.check_output(
-                ["git", "rev-parse", "HEAD"], text=True
-            ).strip()
+            sha = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
         sha7 = sha[:7]
         npm_version = f"{base_version_str}-dev.{now:%Y-%m-%d.%H-%M-%S}.{sha7}"
         pypi_version = f"{base_version_str}.dev{now:%Y%m%d%H%M%S}"
