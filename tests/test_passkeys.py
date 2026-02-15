@@ -232,7 +232,12 @@ class TestFlowState:
 
 class TestLastPasskeyInvariant:
     async def _create_user_with_passkeys(self, db_session: AsyncSession, count: int = 1):
-        """Helper to create a user with *count* active passkeys."""
+        """Helper to create a user with *count* active passkeys.
+
+        Important: avoid post-commit refresh() calls here.
+        refresh() triggers a SELECT which autobegins a new transaction, which
+        conflicts with service functions that own their transaction boundary.
+        """
         user = User()
         db_session.add(user)
         await db_session.flush()
@@ -247,10 +252,11 @@ class TestLastPasskeyInvariant:
             )
             db_session.add(cred)
             creds.append(cred)
+
+        # Ensure PK defaults are populated before commit (defensive).
+        await db_session.flush()
         await db_session.commit()
-        for c in creds:
-            await db_session.refresh(c)
-        await db_session.refresh(user)
+
         return user, creds
 
     async def test_revoke_only_credential_blocked(self, db_session: AsyncSession):
@@ -372,6 +378,8 @@ class TestPasskeyRevokeRoute:
         """Create a user with passkeys and a device-signed JWT.
 
         Returns (user, creds, token).
+
+        Important: avoid post-commit refresh() calls here for the same reason as above.
         """
         import jwt as pyjwt
 
@@ -389,10 +397,9 @@ class TestPasskeyRevokeRoute:
             )
             db_session.add(cred)
             creds.append(cred)
+
+        await db_session.flush()
         await db_session.commit()
-        for c in creds:
-            await db_session.refresh(c)
-        await db_session.refresh(user)
 
         # Create a device keypair and register it
         private_key = ec.generate_private_key(ec.SECP256R1())
