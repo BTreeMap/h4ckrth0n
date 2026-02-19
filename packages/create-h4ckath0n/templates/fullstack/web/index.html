@@ -5,16 +5,12 @@
   <meta charset="UTF-8" />
   <script>
     (() => {
-      const effective = (() => {
-        const stored = (() => {
-          try { return localStorage.getItem("theme-preference"); } catch { return null; }
-        })();
-
-        const theme = stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
-        return theme === "system"
+      const stored = (() => { try { return localStorage.getItem("theme-preference"); } catch { return null; } })();
+      const theme = stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
+      const effective =
+        theme === "system"
           ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
           : theme;
-      })();
 
       document.documentElement.dataset.theme = effective;
     })();

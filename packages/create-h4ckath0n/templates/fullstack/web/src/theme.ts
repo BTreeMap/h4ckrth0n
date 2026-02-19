@@ -13,13 +13,14 @@ export function readThemePreference(): ThemePreference {
 }
 
 export function writeThemePreference(pref: ThemePreference): void {
-  let wrote = false;
   try {
     localStorage.setItem(THEME_STORAGE_KEY, pref);
-    wrote = true;
-  } catch {}
-  if (!wrote) return;
-  window.dispatchEvent(new CustomEvent("theme-preference-change", { detail: pref }));
+  } catch {
+    return;
+  }
+  window.dispatchEvent(
+    new CustomEvent<ThemePreference>("theme-preference-change", { detail: pref }),
+  );
 }
 
 export function getEffectiveTheme(pref: ThemePreference): "light" | "dark" {
