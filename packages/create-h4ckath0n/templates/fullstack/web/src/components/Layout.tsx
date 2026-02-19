@@ -2,55 +2,46 @@ import { Outlet, Link } from "react-router";
 import { useAuth } from "../auth";
 import { Sun, Moon, Shield, LogOut, LayoutDashboard, Settings, Radio } from "lucide-react";
 import { useState, useEffect } from "react";
-
-const THEME_STORAGE_KEY = "theme-preference";
-const THEME_ORDER = ["system", "light", "dark"] as const;
-type ThemePreference = (typeof THEME_ORDER)[number];
-
-function getThemePreference(): ThemePreference {
-  const stored = localStorage.getItem(THEME_STORAGE_KEY);
-  return THEME_ORDER.includes(stored as ThemePreference)
-    ? (stored as ThemePreference)
-    : "system";
-}
-
-function getEffectiveTheme(theme: ThemePreference): "light" | "dark" {
-  return theme === "system"
-    ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
-    : theme;
-}
+import {
+  applyThemePreference,
+  getEffectiveTheme,
+  readThemePreference,
+  subscribeToSystemThemeChanges,
+  type ThemePreference,
+} from "../theme";
 
 export function Layout() {
   const { isAuthenticated, logout } = useAuth();
-  const [theme, setTheme] = useState<ThemePreference>(() =>
-    typeof window === "undefined" ? "system" : getThemePreference()
+  const [themePreference, setThemePreference] = useState<ThemePreference>(() =>
+    typeof window === "undefined" ? "system" : readThemePreference()
   );
-  const [effectiveTheme, setEffectiveTheme] = useState<"light" | "dark">(() =>
-    typeof window === "undefined" ? "light" : getEffectiveTheme(getThemePreference())
+  const [systemIsDark, setSystemIsDark] = useState(() =>
+    typeof window === "undefined" ? false : getEffectiveTheme("system") === "dark"
   );
+  const effectiveTheme: "light" | "dark" = themePreference === "system"
+    ? (systemIsDark ? "dark" : "light")
+    : themePreference;
 
   useEffect(() => {
-    const applyTheme = (nextTheme: ThemePreference) => {
-      const nextEffectiveTheme = getEffectiveTheme(nextTheme);
-      document.documentElement.setAttribute("data-theme", nextEffectiveTheme);
-      setEffectiveTheme(nextEffectiveTheme);
+    applyThemePreference(themePreference);
+    if (themePreference !== "system") return;
+    return subscribeToSystemThemeChanges(() => {
+      applyThemePreference("system");
+      setSystemIsDark(getEffectiveTheme("system") === "dark");
+    });
+  }, [themePreference]);
+
+  useEffect(() => {
+    const onPreferenceChange = () => {
+      const pref = readThemePreference();
+      setThemePreference(pref);
+      if (pref === "system") {
+        setSystemIsDark(getEffectiveTheme("system") === "dark");
+      }
     };
-
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
-    applyTheme(theme);
-
-    if (theme !== "system") return;
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => applyTheme("system");
-
-    mediaQuery.addEventListener?.("change", onChange);
-    mediaQuery.addListener?.(onChange);
-    return () => {
-      mediaQuery.removeEventListener?.("change", onChange);
-      mediaQuery.removeListener?.(onChange);
-    };
-  }, [theme]);
+    window.addEventListener("theme-preference-change", onPreferenceChange);
+    return () => window.removeEventListener("theme-preference-change", onPreferenceChange);
+  }, []);
 
   return (
     <div className="min-h-screen bg-surface">
@@ -65,11 +56,16 @@ export function Layout() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => {
-                  const current = THEME_ORDER.indexOf(theme);
-                  setTheme(THEME_ORDER[(current + 1) % THEME_ORDER.length]!);
+                  if (themePreference === "system") {
+                    setThemePreference(effectiveTheme === "dark" ? "light" : "dark");
+                    return;
+                  }
+                  setThemePreference(themePreference === "light" ? "dark" : "light");
                 }}
                 className="p-2 rounded-xl hover:bg-surface-alt transition-colors"
-                aria-label={`Theme: ${theme}`}
+                aria-label={themePreference === "system"
+                  ? `Theme: system (${effectiveTheme})`
+                  : `Theme: ${themePreference}`}
               >
                 {effectiveTheme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>

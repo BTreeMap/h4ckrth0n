@@ -47,24 +47,36 @@ describe("Layout theme preference", () => {
 
     expect(localStorage.getItem("theme-preference")).toBe("system");
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
-    expect(screen.getByRole("button", { name: "Theme: system" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Theme: system (dark)" })).toBeInTheDocument();
   });
 
-  it("cycles through system, light, and dark preferences", () => {
-    mockMatchMedia(false);
+  it("toggle from system exits system and flips effective theme", () => {
+    mockMatchMedia(true);
     renderLayout();
 
-    const button = screen.getByRole("button", { name: "Theme: system" });
+    const button = screen.getByRole("button", { name: "Theme: system (dark)" });
     fireEvent.click(button);
+
     expect(localStorage.getItem("theme-preference")).toBe("light");
     expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+    expect(screen.getByRole("button", { name: "Theme: light" })).toBeInTheDocument();
+  });
+
+  it("toggle switches only between explicit light and dark", () => {
+    mockMatchMedia(false);
+    localStorage.setItem("theme-preference", "light");
+    renderLayout();
+
+    const button = screen.getByRole("button", { name: "Theme: light" });
 
     fireEvent.click(button);
     expect(localStorage.getItem("theme-preference")).toBe("dark");
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    expect(screen.getByRole("button", { name: "Theme: dark" })).toBeInTheDocument();
 
     fireEvent.click(button);
-    expect(localStorage.getItem("theme-preference")).toBe("system");
+    expect(localStorage.getItem("theme-preference")).toBe("light");
     expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+    expect(screen.queryByRole("button", { name: /Theme: system/ })).not.toBeInTheDocument();
   });
 });
