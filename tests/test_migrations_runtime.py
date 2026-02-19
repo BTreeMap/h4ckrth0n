@@ -2,15 +2,21 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from sqlalchemy import create_engine, text
 
 from h4ckath0n.app import create_app
 from h4ckath0n.config import Settings
 from h4ckath0n.db.base import Base
-from h4ckath0n.db.migrations.runtime import get_schema_status
+from h4ckath0n.db.migrations.runtime import (
+    SchemaStatus,
+    get_schema_status,
+    run_upgrade_to_head_async,
+    run_upgrade_to_head_sync,
+)
 
 
 class TestMigrationStatusDetection:
@@ -91,3 +97,21 @@ class TestAutoUpgradeStartup:
             with TestClient(app):
                 pass
         assert "database schema revision is behind code migrations" in caplog.text
+
+
+class TestAsyncMigrationHelper:
+    def test_run_upgrade_to_head_async_offloads_to_thread_with_normalized_url(self):
+        expected = SchemaStatus(
+            state="at_head",
+            current_revisions=("0001",),
+            head_revisions=("0001",),
+            warning=None,
+        )
+        with patch(
+            "h4ckath0n.db.migrations.runtime.asyncio.to_thread", new_callable=AsyncMock
+        ) as mock_to_thread:
+            mock_to_thread.return_value = expected
+            result = asyncio.run(run_upgrade_to_head_async("sqlite+aiosqlite:///tmp/test.db"))
+
+        mock_to_thread.assert_awaited_once_with(run_upgrade_to_head_sync, "sqlite:///tmp/test.db")
+        assert result == expected

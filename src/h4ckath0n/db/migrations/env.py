@@ -6,6 +6,7 @@ from sqlalchemy import engine_from_config, pool
 
 import h4ckath0n.auth.models  # noqa: F401 – register models with Base.metadata
 from h4ckath0n.db.base import Base
+from h4ckath0n.db.migrations.runtime import normalize_db_url_for_sync
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -13,7 +14,10 @@ config = context.config
 
 # Allow DATABASE_URL override from environment
 if os.environ.get("H4CKATH0N_DATABASE_URL"):
-    config.set_main_option("sqlalchemy.url", os.environ["H4CKATH0N_DATABASE_URL"])
+    # Alembic env is sync; async driver URLs here trigger MissingGreenlet.
+    config.set_main_option(
+        "sqlalchemy.url", normalize_db_url_for_sync(os.environ["H4CKATH0N_DATABASE_URL"])
+    )
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

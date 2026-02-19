@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import argparse
 import importlib.resources
 import json
 import os
 import subprocess
 import sys
 
+from sqlalchemy.engine import make_url
+
+import h4ckath0n.cli as cli_module
 from h4ckath0n.cli import (
     EXIT_BAD_ARGS,
     EXIT_LAST_PASSKEY,
@@ -62,28 +66,69 @@ class TestPackagedMigrations:
 
 class TestNormalizeDbUrl:
     def test_sqlite_aiosqlite(self):
-        assert _normalize_db_url_for_sync("sqlite+aiosqlite:///test.db") == "sqlite:///test.db"
+        assert (
+            make_url(_normalize_db_url_for_sync("sqlite+aiosqlite:///test.db")).drivername
+            == "sqlite"
+        )
 
     def test_postgresql_asyncpg(self):
-        assert (
-            _normalize_db_url_for_sync("postgresql+asyncpg://u:p@host/db")
-            == "postgresql+psycopg://u:p@host/db"
+        normalized = make_url(_normalize_db_url_for_sync("postgresql+asyncpg://u:p@host/db"))
+        assert normalized.drivername == "postgresql+psycopg"
+        assert normalized.username == "u"
+        assert normalized.host == "host"
+        assert normalized.database == "db"
+
+    def test_postgresql_asyncpg_drops_asyncpg_only_query_keys(self):
+        normalized = make_url(
+            _normalize_db_url_for_sync(
+                "postgresql+asyncpg://u:p@host:5432/db"
+                "?sslmode=require"
+                "&prepared_statement_cache_size=0"
+                "&prepared_statement_name_func=x"
+                "&application_name=h4"
+            )
         )
+        assert normalized.drivername == "postgresql+psycopg"
+        assert normalized.query == {
+            "sslmode": "require",
+            "application_name": "h4",
+        }
 
     def test_postgresql_plain(self):
-        assert (
-            _normalize_db_url_for_sync("postgresql://u:p@host/db")
-            == "postgresql+psycopg://u:p@host/db"
-        )
+        normalized = make_url(_normalize_db_url_for_sync("postgresql://u:p@host/db"))
+        assert normalized.drivername == "postgresql+psycopg"
+        assert normalized.username == "u"
+        assert normalized.host == "host"
+        assert normalized.database == "db"
 
     def test_postgres_shorthand(self):
-        assert (
-            _normalize_db_url_for_sync("postgres://u:p@host/db")
-            == "postgresql+psycopg://u:p@host/db"
-        )
+        normalized = make_url(_normalize_db_url_for_sync("postgres://u:p@host/db"))
+        assert normalized.drivername == "postgresql+psycopg"
+        assert normalized.username == "u"
+        assert normalized.host == "host"
+        assert normalized.database == "db"
 
     def test_sqlite_unchanged(self):
-        assert _normalize_db_url_for_sync("sqlite:///test.db") == "sqlite:///test.db"
+        assert make_url(_normalize_db_url_for_sync("sqlite:///test.db")).drivername == "sqlite"
+
+
+class TestAlembicUrlNormalization:
+    def test_db_migrate_current_passes_sync_url_into_alembic_config(self, monkeypatch):
+        captured: dict[str, str] = {}
+
+        def _fake_current(cfg):  # type: ignore[no-untyped-def]
+            captured["sqlalchemy.url"] = cfg.get_main_option("sqlalchemy.url")
+
+        monkeypatch.setattr(cli_module.alembic_command, "current", _fake_current)
+
+        args = argparse.Namespace(
+            db="sqlite+aiosqlite:///./test.db",
+            format="json",
+            pretty=False,
+        )
+        exit_code = cli_module._cmd_db_migrate_current(args)
+        assert exit_code == 0
+        assert make_url(captured["sqlalchemy.url"]) == make_url("sqlite:///./test.db")
 
 
 # ---------------------------------------------------------------------------
@@ -203,6 +248,12 @@ class TestCLIDbMigrate:
         db_url = f"sqlite:///{tmp_path}/current_test.db"
         result = _run_cli("db", "migrate", "current", "--db", db_url)
         assert result.returncode == 0
+
+    def test_current_with_sqlite_aiosqlite_url(self, tmp_path):
+        db_url = f"sqlite+aiosqlite:///{tmp_path}/current_test_async.db"
+        result = _run_cli("db", "migrate", "current", "--db", db_url)
+        assert result.returncode == 0
+        assert "MissingGreenlet" not in result.stderr
 
     def test_heads(self, tmp_path):
         db_url = f"sqlite:///{tmp_path}/heads_test.db"
@@ -330,6 +381,24 @@ class TestCLIUsersOperations:
         assert result.returncode == 0
         data = json.loads(result.stdout)
         assert data["scopes"] == "a:b,c:d"
+
+
+class TestCLISubprocessWithAsyncDbUrlEnv:
+    def test_db_ping_uses_sync_tooling_driver(self, tmp_path):
+        db_url = f"sqlite+aiosqlite:///{tmp_path}/ping_env.db"
+        result = _run_cli("db", "ping", env_override={"H4CKATH0N_DATABASE_URL": db_url})
+        assert result.returncode == 0
+        assert "MissingGreenlet" not in result.stderr
+        data = json.loads(result.stdout)
+        assert data["ok"] is True
+
+    def test_db_migrate_current_uses_sync_tooling_driver(self, tmp_path):
+        db_url = f"sqlite+aiosqlite:///{tmp_path}/current_env.db"
+        result = _run_cli(
+            "db", "migrate", "current", env_override={"H4CKATH0N_DATABASE_URL": db_url}
+        )
+        assert result.returncode == 0
+        assert "MissingGreenlet" not in result.stderr
 
 
 class TestCLIPasskeysRevoke:

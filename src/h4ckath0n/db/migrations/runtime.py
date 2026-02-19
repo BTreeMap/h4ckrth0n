@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import importlib.resources
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -12,7 +13,7 @@ from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import inspect
-from sqlalchemy.engine import Engine, create_engine
+from sqlalchemy.engine import Engine, create_engine, make_url
 
 
 class PackagedMigrationsError(RuntimeError):
@@ -27,17 +28,31 @@ class SchemaStatus:
     warning: str | None
 
 
+_ASYNCPG_ONLY_QUERY_KEYS = frozenset(
+    {
+        "prepared_statement_cache_size",
+        "prepared_statement_name_func",
+    }
+)
+
+
 def normalize_db_url_for_sync(url: str) -> str:
-    """Normalize a database URL to a synchronous driver for migration checks."""
-    if url.startswith("sqlite+aiosqlite"):
-        return url.replace("sqlite+aiosqlite", "sqlite", 1)
-    if url.startswith("postgresql+asyncpg"):
-        return url.replace("postgresql+asyncpg", "postgresql+psycopg", 1)
-    if url.startswith("postgresql://"):
-        return url.replace("postgresql://", "postgresql+psycopg://", 1)
-    if url.startswith("postgres://"):
-        return url.replace("postgres://", "postgresql+psycopg://", 1)
-    return url
+    """Normalize tooling DB URLs to sync drivers (Alembic env.py is sync-only)."""
+    parsed = make_url(url)
+    drivername = parsed.drivername
+    normalized_driver = drivername
+
+    if drivername == "sqlite+aiosqlite":
+        normalized_driver = "sqlite"
+    elif drivername == "postgresql+asyncpg" or drivername in {"postgresql", "postgres"}:
+        normalized_driver = "postgresql+psycopg"
+
+    query = dict(parsed.query)
+    if normalized_driver == "postgresql+psycopg":
+        for key in _ASYNCPG_ONLY_QUERY_KEYS:
+            query.pop(key, None)
+
+    return str(parsed.set(drivername=normalized_driver, query=query))
 
 
 def create_sync_engine(url: str) -> Engine:
@@ -136,13 +151,13 @@ def get_schema_status(db_url: str) -> SchemaStatus:
     )
 
 
-def run_upgrade_to_head(db_url: str) -> SchemaStatus:
+def run_upgrade_to_head_sync(db_url: str) -> SchemaStatus:
     """Upgrade schema to head using packaged migrations.
 
     For a fresh database, initialize schema with create_all and stamp head.
     """
-    status = get_schema_status(db_url)
     sync_url = normalize_db_url_for_sync(db_url)
+    status = get_schema_status(sync_url)
     if status.state == "stamp_required":
         return status
 
@@ -161,4 +176,15 @@ def run_upgrade_to_head(db_url: str) -> SchemaStatus:
         else:
             alembic_command.upgrade(cfg, "head")
 
-    return get_schema_status(db_url)
+    return get_schema_status(sync_url)
+
+
+def run_upgrade_to_head(db_url: str) -> SchemaStatus:
+    """Backwards-compatible sync entrypoint for tooling auto-upgrade."""
+    return run_upgrade_to_head_sync(db_url)
+
+
+async def run_upgrade_to_head_async(db_url: str) -> SchemaStatus:
+    """Run sync Alembic upgrade work in a thread when called from async code."""
+    sync_url = normalize_db_url_for_sync(db_url)
+    return await asyncio.to_thread(run_upgrade_to_head_sync, sync_url)
