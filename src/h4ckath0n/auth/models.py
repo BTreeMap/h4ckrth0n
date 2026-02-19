@@ -56,7 +56,7 @@ class WebAuthnCredential(Base):
     sign_count: Mapped[int] = mapped_column(nullable=False, default=0)
     aaguid: Mapped[str | None] = mapped_column(String(36), nullable=True)
     transports: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array
-    name: Mapped[str | None] = mapped_column("nickname", String(64), nullable=True)
+    name: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
