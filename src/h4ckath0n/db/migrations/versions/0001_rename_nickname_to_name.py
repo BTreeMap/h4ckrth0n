@@ -12,7 +12,6 @@ Safe, additive migration:
 """
 
 import sqlalchemy as sa
-
 from alembic import op
 
 # revision identifiers

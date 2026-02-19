@@ -140,6 +140,7 @@ All settings use the `H4CKATH0N_` prefix unless noted.
 |---|---|---|
 | `H4CKATH0N_ENV` | `development` | `development` or `production` |
 | `H4CKATH0N_DATABASE_URL` | `sqlite:///./h4ckath0n.db` | SQLAlchemy connection string |
+| `H4CKATH0N_AUTO_UPGRADE` | `false` | Auto-run packaged DB migrations to head on startup |
 | `H4CKATH0N_RP_ID` | `localhost` in development | WebAuthn relying party ID, required in production |
 | `H4CKATH0N_ORIGIN` | `http://localhost:8000` in development | WebAuthn origin, required in production |
 | `H4CKATH0N_WEBAUTHN_TTL_SECONDS` | `300` | WebAuthn challenge TTL in seconds |
@@ -163,9 +164,30 @@ Set a Postgres database URL to run against Postgres:
 H4CKATH0N_DATABASE_URL=postgresql+psycopg://user:pass@host:5432/dbname
 ```
 
-`create_app()` calls `Base.metadata.create_all` on startup. Alembic is installed as a
-dependency, but migration scaffolding is not generated for you. See
-`docs/database/migrations.md` for a safe workflow when you add migrations.
+`create_app()` calls `Base.metadata.create_all` on startup.
+
+h4ckath0n also ships an operator CLI and packaged Alembic migrations:
+
+```bash
+h4ckath0n db ping
+h4ckath0n db migrate upgrade --to head --yes
+```
+
+If startup or `db ping` reports that the database schema is behind, run:
+
+```bash
+h4ckath0n db migrate upgrade --to head --yes
+```
+
+If startup or `db ping` reports that the database was initialized without Alembic versioning,
+run:
+
+```bash
+h4ckath0n db migrate stamp --to <baseline> --yes
+h4ckath0n db migrate upgrade --to head --yes
+```
+
+For legacy `create_all` deployments in current releases, use `<baseline>=head`.
 
 ## LLM usage
 

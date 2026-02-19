@@ -22,6 +22,7 @@ class Settings(BaseSettings):
 
     # --- database ---
     database_url: str = "sqlite:///./h4ckath0n.db"
+    auto_upgrade: bool = False
 
     # --- WebAuthn / Passkeys ---
     rp_id: str = ""
