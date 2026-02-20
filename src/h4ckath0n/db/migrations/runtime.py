@@ -52,7 +52,10 @@ def normalize_db_url_for_sync(url: str) -> str:
         for key in _ASYNCPG_ONLY_QUERY_KEYS:
             query.pop(key, None)
 
-    return str(parsed.set(drivername=normalized_driver, query=query))
+    normalized = parsed.set(drivername=normalized_driver, query=query)
+    return normalized.render_as_string(
+        hide_password=False
+    )  # Alembic needs the password for stamp/upgrades when no env var is used
 
 
 def create_sync_engine(url: str) -> Engine:

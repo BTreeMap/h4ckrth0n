@@ -14,6 +14,7 @@ from h4ckath0n.db.base import Base
 from h4ckath0n.db.migrations.runtime import (
     SchemaStatus,
     get_schema_status,
+    normalize_db_url_for_sync,
     run_upgrade_to_head_async,
     run_upgrade_to_head_sync,
 )
@@ -100,6 +101,19 @@ class TestAutoUpgradeStartup:
 
 
 class TestAsyncMigrationHelper:
+    def test_normalize_db_url_for_sync_preserves_password_and_strips_asyncpg_query_keys():
+        url = (
+            "postgresql+asyncpg://flow:flow@localhost:5432/flow_test"
+            "?prepared_statement_cache_size=0&sslmode=disable"
+        )
+        sync = normalize_db_url_for_sync(url)
+
+        assert sync.startswith("postgresql+psycopg://")
+        assert "flow:flow@" in sync  # password must not become "***"
+        assert "***" not in sync
+        assert "prepared_statement_cache_size" not in sync
+        assert "sslmode=disable" in sync
+
     def test_run_upgrade_to_head_async_offloads_to_thread_with_normalized_url(self):
         expected = SchemaStatus(
             state="at_head",
