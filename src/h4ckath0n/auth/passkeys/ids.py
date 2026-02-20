@@ -25,7 +25,6 @@ import contextlib
 import os
 import sys
 import threading
-import uuid
 import warnings
 
 from cryptography.hazmat.primitives import hashes
@@ -118,19 +117,27 @@ def _thread_reader() -> _ShakeXOFReader:
     return reader
 
 
+def random_bytes(nbytes: int) -> bytes:
+    """Return *nbytes* random bytes from the per-thread XOF stream.
+
+    This is the shared primitive used by higher-level ID helpers.
+    """
+    if nbytes <= 0:
+        raise ValueError("nbytes must be > 0")
+    return _thread_reader().read(nbytes)
+
+
 def random_base32(nbytes: int = 20) -> str:
-    """Return a lowercase base32 string (no padding) from *nbytes* of XOF output.
+    """Return a lowercase base32 string (no padding) from *nbytes* random bytes.
 
     Notes
     -----
     * For nbytes=20, the output length is 32 characters, which matches this module's ID scheme.
     * To avoid '=' padding in RFC 4648 base32, nbytes must be a multiple of 5.
     """
-    if nbytes <= 0:
-        raise ValueError("nbytes must be > 0")
     if nbytes % 5 != 0:
         raise ValueError("nbytes must be a multiple of 5 to avoid base32 padding")
-    raw = _thread_reader().read(nbytes)
+    raw = random_bytes(nbytes)
     return base64.b32encode(raw).decode("ascii").lower()
 
 
@@ -153,8 +160,8 @@ def new_device_id() -> str:
 
 
 def new_token_id() -> str:
-    """Generate a generic token/row ID (UUID hex, 32 chars)."""
-    return uuid.uuid4().hex
+    """Generate a generic token/row ID (128-bit random hex, 32 chars)."""
+    return random_bytes(16).hex()
 
 
 def is_user_id(value: str) -> bool:
