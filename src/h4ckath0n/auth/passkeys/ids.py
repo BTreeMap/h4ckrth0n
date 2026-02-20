@@ -38,8 +38,6 @@ _DOMAIN = b"h4ckath0n:idgen:v1\x00"
 # No env override, always generate from OS at startup/import time.
 _MASTER_KEY = os.urandom(32)
 
-_tls = threading.local()
-
 _U64_MASK = (1 << 64) - 1
 
 
@@ -49,11 +47,46 @@ def _u64le(x: int) -> bytes:
     return (x & _U64_MASK).to_bytes(8, "little", signed=False)
 
 
+class _ShakeXOFReader:
+    __slots__ = ("_xof",)
+
+    def __init__(self, tid: int) -> None:
+        alg = hashes.SHAKE128(digest_size=sys.maxsize)
+        xof = hashes.XOFHash(alg)
+
+        # Bind this per-thread stream to: domain || master_key || tid || randombytes(16)
+        xof.update(_DOMAIN)
+        xof.update(_MASTER_KEY)
+        xof.update(_u64le(tid))
+        xof.update(os.urandom(16))  # Extra per-reader randomness from the OS.
+
+        self._xof = xof
+
+    def read(self, nbytes: int) -> bytes:
+        if nbytes < 0:
+            raise ValueError("nbytes must be >= 0")
+        return self._xof.squeeze(nbytes)
+
+
+class _TLS(threading.local):
+    # Typed thread-local slots for mypy (avoids Any from getattr on threading.local).
+    reader: _ShakeXOFReader | None
+    pid: int | None
+
+    def __init__(self) -> None:
+        self.reader = None
+        self.pid = None
+
+
+_tls = _TLS()
+
+
 def _clear_tls_after_fork_child() -> None:
     # After fork, the child inherits thread-local objects and their internal XOF state.
     # Clearing forces a rebuild and immediate divergence in the child.
     with contextlib.suppress(Exception):
-        _tls.__dict__.clear()
+        _tls.reader = None
+        _tls.pid = None
 
 
 _FORK_HOOK_INSTALLED = False
@@ -78,35 +111,14 @@ if not _FORK_HOOK_INSTALLED and hasattr(os, "fork"):
     )
 
 
-class _ShakeXOFReader:
-    __slots__ = ("_xof",)
-
-    def __init__(self, tid: int) -> None:
-        alg = hashes.SHAKE128(digest_size=sys.maxsize)
-        xof = hashes.XOFHash(alg)
-
-        # Bind this per-thread stream to: domain || master_key || tid || randombytes(16)
-        xof.update(_DOMAIN)
-        xof.update(_MASTER_KEY)
-        xof.update(_u64le(tid))
-        xof.update(os.urandom(16))  # Extra per-reader randomness from the OS.
-
-        self._xof = xof
-
-    def read(self, nbytes: int) -> bytes:
-        if nbytes < 0:
-            raise ValueError("nbytes must be >= 0")
-        return self._xof.squeeze(nbytes)
-
-
 def _thread_reader() -> _ShakeXOFReader:
-    reader = getattr(_tls, "reader", None)
+    reader = _tls.reader
     if reader is not None:
         if _FORK_HOOK_INSTALLED:
             return reader
         # Fallback safety if we could not install a fork hook: detect fork by PID change.
         pid = os.getpid()
-        if getattr(_tls, "pid", None) == pid:
+        if _tls.pid == pid:
             return reader
 
     tid = threading.get_ident()
