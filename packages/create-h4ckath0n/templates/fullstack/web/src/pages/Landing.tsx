@@ -1,76 +1,147 @@
 import { Link } from "react-router";
-import { Shield, Fingerprint, Zap, Lock } from "lucide-react";
+import {
+  Fingerprint,
+  Zap,
+  Lock,
+  ArrowRight,
+} from "lucide-react";
 import { useAuth } from "../auth";
 import { Button } from "../components/Button";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "../components/Card";
+import { Badge } from "../components/Badge";
 
 export function Landing() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <div className="max-w-3xl mx-auto text-center py-16">
-      <div className="flex justify-center mb-6">
-        <div className="p-4 bg-primary/10 rounded-3xl">
-          <Shield className="w-12 h-12 text-primary" />
+    <div className="flex flex-col items-center">
+      {/* Hero Section */}
+      <section className="w-full max-w-5xl mx-auto pt-20 pb-32 px-4 text-center">
+        <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-sm font-medium text-primary mb-8 backdrop-blur-sm">
+          <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse"></span>
+          Hackathon Ready Template
         </div>
-      </div>
 
-      <h1 className="text-4xl sm:text-5xl font-bold text-text mb-4">
-        Welcome to <span className="text-primary">{"{{PROJECT_NAME}}"}</span>
-      </h1>
+        <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-text mb-6">
+          Build your next big thing
+          <span className="text-primary block mt-2">in record time.</span>
+        </h1>
 
-      <p className="text-lg text-text-muted mb-8 max-w-xl mx-auto">
-        A secure-by-default hackathon starter with passkey authentication,
-        device-bound keys, and role-based access control.
-      </p>
+        <p className="text-xl text-text-muted mb-10 max-w-2xl mx-auto leading-relaxed">
+          A secure-by-default starter kit with passkey authentication,
+          device-bound keys, and role-based access control. Focus on shipping,
+          not boilerplate.
+        </p>
 
-      <div className="flex justify-center gap-4 mb-16">
-        {isAuthenticated ? (
-          <Link to="/dashboard">
-            <Button size="lg">Go to Dashboard</Button>
-          </Link>
-        ) : (
-          <>
-            <Link to="/register">
-              <Button size="lg" data-testid="landing-register">
-                <Fingerprint className="w-5 h-5" />
-                Get Started
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          {isAuthenticated ? (
+            <Link to="/dashboard">
+              <Button size="lg" className="h-12 px-8 text-lg">
+                Go to Dashboard <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-            <Link to="/login">
-              <Button variant="secondary" size="lg" data-testid="landing-login">
-                Login
-              </Button>
-            </Link>
-          </>
-        )}
-      </div>
+          ) : (
+            <>
+              <Link to="/register">
+                <Button
+                  size="lg"
+                  className="h-12 px-8 text-lg"
+                  data-testid="landing-register"
+                >
+                  <Fingerprint className="w-5 h-5 mr-2" />
+                  Start Hacking
+                </Button>
+              </Link>
+              <Link to="/login">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-12 px-8 text-lg"
+                  data-testid="landing-login"
+                >
+                  Login
+                </Button>
+              </Link>
+            </>
+          )}
+        </div>
+      </section>
 
-      <div className="grid sm:grid-cols-3 gap-6 text-left">
-        <div className="p-6 bg-surface-alt rounded-2xl border border-border">
-          <Fingerprint className="w-8 h-8 text-primary mb-3" />
-          <h3 className="font-semibold text-text mb-1">Passkey Auth</h3>
-          <p className="text-sm text-text-muted">
-            No passwords. Register and login with device biometrics or security
-            keys.
-          </p>
+      {/* Features Grid */}
+      <section className="w-full max-w-6xl mx-auto px-4 pb-24">
+        <div className="grid md:grid-cols-3 gap-6">
+          <Card className="bg-surface/50 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-colors">
+            <CardHeader>
+              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <Fingerprint className="w-6 h-6 text-primary" />
+              </div>
+              <CardTitle>Passkey Auth</CardTitle>
+              <CardDescription className="text-base mt-2">
+                No passwords to store or leak. Register and login with device
+                biometrics or security keys.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="bg-surface/50 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-colors">
+            <CardHeader>
+              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <Lock className="w-6 h-6 text-primary" />
+              </div>
+              <CardTitle>Device-Bound Keys</CardTitle>
+              <CardDescription className="text-base mt-2">
+                Each device has a non-extractable P-256 keypair. Tokens are
+                signed locally and verified server-side.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="bg-surface/50 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-colors">
+            <CardHeader>
+              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <Zap className="w-6 h-6 text-primary" />
+              </div>
+              <CardTitle>Ship Fast</CardTitle>
+              <CardDescription className="text-base mt-2">
+                Built on FastAPI + React + Vite. Secure defaults so you can
+                focus on building your product.
+              </CardDescription>
+            </CardHeader>
+          </Card>
         </div>
-        <div className="p-6 bg-surface-alt rounded-2xl border border-border">
-          <Lock className="w-8 h-8 text-primary mb-3" />
-          <h3 className="font-semibold text-text mb-1">Device-Bound Keys</h3>
-          <p className="text-sm text-text-muted">
-            Each device has a non-extractable P-256 keypair. Tokens are signed
-            locally and verified server-side.
-          </p>
+      </section>
+
+      {/* Tech Stack */}
+      <section className="w-full bg-surface-alt/50 py-24 border-y border-border">
+        <div className="max-w-5xl mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold mb-12">Powered by modern tech</h2>
+          <div className="flex flex-wrap justify-center gap-4">
+            {[
+              "React 19",
+              "Vite",
+              "Tailwind CSS",
+              "FastAPI",
+              "SQLAlchemy",
+              "WebAuthn",
+              "TypeScript",
+              "Python",
+            ].map((tech) => (
+              <Badge
+                key={tech}
+                variant="secondary"
+                className="text-lg py-2 px-4"
+              >
+                {tech}
+              </Badge>
+            ))}
+          </div>
         </div>
-        <div className="p-6 bg-surface-alt rounded-2xl border border-border">
-          <Zap className="w-8 h-8 text-primary mb-3" />
-          <h3 className="font-semibold text-text mb-1">Ship Fast</h3>
-          <p className="text-sm text-text-muted">
-            Built on FastAPI + React + Vite. Secure defaults so you can focus on
-            building.
-          </p>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }
