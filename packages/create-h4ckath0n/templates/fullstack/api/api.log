@@ -1,0 +1,6 @@
+error: Failed to parse: `pyproject.toml`
+  Caused by: TOML parse error at line 2, column 8
+  |
+2 | name = "{{PROJECT_NAME}}-api"
+  |        ^^^^^^^^^^^^^^^^^^^^^^
+Not a valid package or extra name: "{{PROJECT_NAME}}-api". Names must start and end with a letter or digit and may only contain -, _, ., and alphanumeric characters.
