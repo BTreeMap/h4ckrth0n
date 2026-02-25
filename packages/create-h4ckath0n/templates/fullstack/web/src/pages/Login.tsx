@@ -72,7 +72,7 @@ export function Login() {
             disabled={isLoading}
             className="w-full h-12 text-base font-semibold"
             size="lg"
-            data-testid="login-passkey-btn"
+            data-testid="login-submit"
           >
             {isLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

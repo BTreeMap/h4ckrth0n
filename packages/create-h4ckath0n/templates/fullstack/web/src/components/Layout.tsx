@@ -68,8 +68,11 @@ export function Layout() {
 
   // Close mobile menu on route change
   useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [location.pathname]);
+    if (isMobileMenuOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsMobileMenuOpen(false);
+    }
+  }, [location.pathname, isMobileMenuOpen]);
 
   const toggleTheme = () => {
     if (themePreference === "system") {
@@ -153,6 +156,7 @@ export function Layout() {
                     size="sm"
                     onClick={() => void logout()}
                     className="text-danger hover:text-danger hover:bg-danger/10"
+                    data-testid="nav-logout"
                   >
                     <LogOut className="w-4 h-4 mr-2" />
                     Logout
@@ -230,6 +234,7 @@ export function Layout() {
                   <button
                     onClick={() => void logout()}
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-danger hover:bg-danger/10 transition-colors"
+                    data-testid="nav-logout-mobile"
                   >
                     <LogOut className="w-4 h-4" />
                     Logout

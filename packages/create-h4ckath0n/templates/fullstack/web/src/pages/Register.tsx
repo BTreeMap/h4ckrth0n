@@ -71,20 +71,34 @@ export function Register() {
             </Alert>
           )}
 
-          <Button
-            onClick={handlePasskeyRegister}
-            disabled={isLoading || !username}
-            className="w-full h-12 text-base font-semibold"
-            size="lg"
-            data-testid="register-passkey-btn"
-          >
-            {isLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Fingerprint className="mr-2 h-5 w-5" />
-            )}
-            Register with Passkey
-          </Button>
+          <div className="space-y-4">
+            <Input
+              id="username"
+              label="Username"
+              type="text"
+              placeholder="johndoe"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={isLoading}
+              data-testid="register-display-name"
+              autoComplete="username"
+            />
+
+            <Button
+              onClick={handlePasskeyRegister}
+              disabled={isLoading || !username}
+              className="w-full h-12 text-base font-semibold"
+              size="lg"
+              data-testid="register-submit"
+            >
+              {isLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Fingerprint className="mr-2 h-5 w-5" />
+              )}
+              Register with Passkey
+            </Button>
+          </div>
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -98,17 +112,6 @@ export function Register() {
           </div>
 
           <form onSubmit={handlePasswordRegister} className="space-y-4">
-            <Input
-              id="username"
-              label="Username"
-              type="text"
-              placeholder="johndoe"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              disabled={isLoading}
-              data-testid="register-username-input"
-              autoComplete="username"
-            />
             <Input
               id="email"
               label="Email"
