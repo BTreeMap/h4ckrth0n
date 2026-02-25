@@ -21,21 +21,23 @@ export function Landing() {
       {/* Hero Section */}
       <section className="flex-1 flex flex-col items-center justify-center text-center px-4 py-24 md:py-32 bg-surface">
         <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-700 slide-in-from-bottom-4">
-          <Badge variant="secondary" className="px-4 py-1.5 text-sm rounded-full">
+          <Badge
+            variant="secondary"
+            className="px-4 py-1.5 text-sm rounded-full"
+          >
             <span className="mr-2 text-primary">●</span>
-            v1.0 is now live
+            Hackathon Ready Template
           </Badge>
 
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-text leading-tight">
-            Usually templates explain what they are on the landing page,
-            <span className="text-primary block mt-2">
-              but maybe you want it to look like a "real product" out of the box?
-            </span>
+            Build your next big thing
+            <span className="text-primary block mt-2">in record time.</span>
           </h1>
 
           <p className="text-xl md:text-2xl text-text-muted max-w-2xl mx-auto leading-relaxed">
-            A secure, modern, and production-ready foundation for your next big
-            idea. Built with h4ckath0n.
+            A secure-by-default starter kit with passkey authentication,
+            device-bound keys, and role-based access control. Focus on shipping,
+            not boilerplate.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
@@ -49,7 +51,7 @@ export function Landing() {
               <>
                 <Link to="/register">
                   <Button size="lg" className="h-14 px-8 text-lg rounded-2xl">
-                    Get Started Free
+                    Get Started
                   </Button>
                 </Link>
                 <Link to="/login">
@@ -66,7 +68,8 @@ export function Landing() {
           </div>
 
           <div className="pt-8 text-sm text-text-muted">
-            Trusted by over <span className="font-semibold text-text">100+</span> developers
+            Powered by <span className="font-semibold text-text">FastAPI</span>{" "}
+            and <span className="font-semibold text-text">React</span>
           </div>
         </div>
       </section>
@@ -134,15 +137,18 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Pricing Section (Placeholder) */}
+      {/* Pricing Section (Demo) */}
       <section className="py-24 bg-surface px-4">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
+            <Badge variant="outline" className="mb-4">
+              Example Component
+            </Badge>
             <h2 className="text-3xl font-bold tracking-tight mb-4">
               Simple, transparent pricing
             </h2>
             <p className="text-text-muted text-lg">
-              Choose the plan that's right for you.
+              Use this section to showcase your product's value.
             </p>
           </div>
 
@@ -174,7 +180,8 @@ export function Landing() {
               </div>
               <h3 className="font-semibold text-lg mb-2">Pro</h3>
               <div className="text-4xl font-bold mb-6">
-                $29<span className="text-lg text-text-muted font-normal">/mo</span>
+                $29
+                <span className="text-lg text-text-muted font-normal">/mo</span>
               </div>
               <ul className="space-y-4 mb-8 text-text-muted">
                 <li className="flex items-center gap-2">
@@ -228,13 +235,22 @@ export function Landing() {
             <span>{"{{PROJECT_NAME}}"}</span>
           </div>
           <div className="flex gap-8 text-sm text-text-muted">
-            <a href="#" className="hover:text-text transition-colors">Product</a>
-            <a href="#" className="hover:text-text transition-colors">Features</a>
-            <a href="#" className="hover:text-text transition-colors">Pricing</a>
-            <a href="#" className="hover:text-text transition-colors">About</a>
+            <a href="#" className="hover:text-text transition-colors">
+              Product
+            </a>
+            <a href="#" className="hover:text-text transition-colors">
+              Features
+            </a>
+            <a href="#" className="hover:text-text transition-colors">
+              Pricing
+            </a>
+            <a href="#" className="hover:text-text transition-colors">
+              About
+            </a>
           </div>
           <div className="text-sm text-text-muted">
-            &copy; {new Date().getFullYear()} {"{{PROJECT_NAME}}"}. All rights reserved.
+            &copy; {new Date().getFullYear()} {"{{PROJECT_NAME}}"}. All rights
+            reserved.
           </div>
         </div>
       </footer>
