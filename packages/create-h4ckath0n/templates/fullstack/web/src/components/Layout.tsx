@@ -85,7 +85,12 @@ export function Layout() {
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/demo/realtime", label: "Realtime", icon: Radio },
-    { href: "/settings", label: "Settings", icon: Settings },
+    {
+      href: "/settings",
+      label: "Settings",
+      icon: Settings,
+      testId: "nav-settings",
+    },
   ];
 
   return (
@@ -112,7 +117,11 @@ export function Layout() {
                     const Icon = link.icon;
                     const isActive = location.pathname === link.href;
                     return (
-                      <Link key={link.href} to={link.href}>
+                      <Link
+                        key={link.href}
+                        to={link.href}
+                        data-testid={link.testId}
+                      >
                         <Button
                           variant={isActive ? "secondary" : "ghost"}
                           size="sm"

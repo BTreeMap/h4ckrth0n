@@ -50,7 +50,11 @@ export function Landing() {
             ) : (
               <>
                 <Link to="/register">
-                  <Button size="lg" className="h-14 px-8 text-lg rounded-2xl">
+                  <Button
+                    size="lg"
+                    className="h-14 px-8 text-lg rounded-2xl"
+                    data-testid="landing-register"
+                  >
                     Get Started
                   </Button>
                 </Link>
