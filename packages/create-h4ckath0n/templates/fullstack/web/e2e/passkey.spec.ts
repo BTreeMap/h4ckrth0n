@@ -63,17 +63,9 @@ test.describe("Passkey auth flows", () => {
     });
 
     // ── User-defined endpoints: demo/ping + demo/echo ─────────────────
-    // The Dashboard renders the results of GET /demo/ping and POST /demo/echo.
+    // The Dashboard no longer renders these directly, but we can verify the dashboard loaded
     await page.goto("/dashboard");
-    await expect(page.getByTestId("demo-ping")).toContainText("✓ ok", {
-      timeout: 10_000,
-    });
-    await expect(page.getByTestId("demo-echo")).toContainText(
-      '"hello" → "olleh"',
-      {
-        timeout: 10_000,
-      },
-    );
+    await expect(page.getByTestId("dashboard-heading")).toBeVisible();
   });
 
   // -----------------------------------------------------------------------
@@ -195,8 +187,10 @@ test.describe("Passkey auth flows", () => {
     await expect(revokeButtons).toHaveCount(2);
     await revokeButtons.first().click();
 
-    // Wait for revocation to complete – one item should show "(revoked)"
-    await expect(page.getByText("(revoked)")).toBeVisible({ timeout: 10_000 });
+    // Wait for revocation to complete – one item should show "Revoked" badge
+    await expect(page.getByText("Revoked", { exact: true })).toBeVisible({
+      timeout: 10_000,
+    });
 
     // Only 1 revoke button should remain (the other passkey is revoked)
     await expect(page.getByTestId("revoke-passkey-btn")).toHaveCount(1);
