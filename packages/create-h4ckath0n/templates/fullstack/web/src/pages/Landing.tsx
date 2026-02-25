@@ -1,147 +1,243 @@
 import { Link } from "react-router";
 import {
-  Fingerprint,
-  Zap,
-  Lock,
+  Check,
   ArrowRight,
+  Zap,
+  Shield,
+  Code2,
+  Users,
+  Layout,
+  Globe,
 } from "lucide-react";
 import { useAuth } from "../auth";
 import { Button } from "../components/Button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "../components/Card";
 import { Badge } from "../components/Badge";
 
 export function Landing() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
-      <section className="w-full max-w-5xl mx-auto pt-20 pb-32 px-4 text-center">
-        <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-sm font-medium text-primary mb-8 backdrop-blur-sm">
-          <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse"></span>
-          Hackathon Ready Template
-        </div>
+      <section className="flex-1 flex flex-col items-center justify-center text-center px-4 py-24 md:py-32 bg-surface">
+        <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-700 slide-in-from-bottom-4">
+          <Badge variant="secondary" className="px-4 py-1.5 text-sm rounded-full">
+            <span className="mr-2 text-primary">●</span>
+            v1.0 is now live
+          </Badge>
 
-        <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-text mb-6">
-          Build your next big thing
-          <span className="text-primary block mt-2">in record time.</span>
-        </h1>
+          <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-text leading-tight">
+            Usually templates explain what they are on the landing page,
+            <span className="text-primary block mt-2">
+              but maybe you want it to look like a "real product" out of the box?
+            </span>
+          </h1>
 
-        <p className="text-xl text-text-muted mb-10 max-w-2xl mx-auto leading-relaxed">
-          A secure-by-default starter kit with passkey authentication,
-          device-bound keys, and role-based access control. Focus on shipping,
-          not boilerplate.
-        </p>
+          <p className="text-xl md:text-2xl text-text-muted max-w-2xl mx-auto leading-relaxed">
+            A secure, modern, and production-ready foundation for your next big
+            idea. Built with h4ckath0n.
+          </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          {isAuthenticated ? (
-            <Link to="/dashboard">
-              <Button size="lg" className="h-12 px-8 text-lg">
-                Go to Dashboard <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-            </Link>
-          ) : (
-            <>
-              <Link to="/register">
-                <Button
-                  size="lg"
-                  className="h-12 px-8 text-lg"
-                  data-testid="landing-register"
-                >
-                  <Fingerprint className="w-5 h-5 mr-2" />
-                  Start Hacking
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+            {isAuthenticated ? (
+              <Link to="/dashboard">
+                <Button size="lg" className="h-14 px-8 text-lg rounded-2xl">
+                  Go to Dashboard <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
-              <Link to="/login">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="h-12 px-8 text-lg"
-                  data-testid="landing-login"
-                >
-                  Login
-                </Button>
-              </Link>
-            </>
-          )}
+            ) : (
+              <>
+                <Link to="/register">
+                  <Button size="lg" className="h-14 px-8 text-lg rounded-2xl">
+                    Get Started Free
+                  </Button>
+                </Link>
+                <Link to="/login">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="h-14 px-8 text-lg rounded-2xl"
+                  >
+                    View Demo
+                  </Button>
+                </Link>
+              </>
+            )}
+          </div>
+
+          <div className="pt-8 text-sm text-text-muted">
+            Trusted by over <span className="font-semibold text-text">100+</span> developers
+          </div>
         </div>
       </section>
 
       {/* Features Grid */}
-      <section className="w-full max-w-6xl mx-auto px-4 pb-24">
-        <div className="grid md:grid-cols-3 gap-6">
-          <Card className="bg-surface/50 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-colors">
-            <CardHeader>
-              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <Fingerprint className="w-6 h-6 text-primary" />
-              </div>
-              <CardTitle>Passkey Auth</CardTitle>
-              <CardDescription className="text-base mt-2">
-                No passwords to store or leak. Register and login with device
-                biometrics or security keys.
-              </CardDescription>
-            </CardHeader>
-          </Card>
+      <section className="py-24 bg-surface-alt/50 border-y border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold tracking-tight mb-4">
+              Everything you need to ship
+            </h2>
+            <p className="text-text-muted text-lg max-w-2xl mx-auto">
+              Focus on your product logic, not the infrastructure. We handle the
+              boring stuff.
+            </p>
+          </div>
 
-          <Card className="bg-surface/50 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-colors">
-            <CardHeader>
-              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <Lock className="w-6 h-6 text-primary" />
-              </div>
-              <CardTitle>Device-Bound Keys</CardTitle>
-              <CardDescription className="text-base mt-2">
-                Each device has a non-extractable P-256 keypair. Tokens are
-                signed locally and verified server-side.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="bg-surface/50 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-colors">
-            <CardHeader>
-              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <Zap className="w-6 h-6 text-primary" />
-              </div>
-              <CardTitle>Ship Fast</CardTitle>
-              <CardDescription className="text-base mt-2">
-                Built on FastAPI + React + Vite. Secure defaults so you can
-                focus on building your product.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-      </section>
-
-      {/* Tech Stack */}
-      <section className="w-full bg-surface-alt/50 py-24 border-y border-border">
-        <div className="max-w-5xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-12">Powered by modern tech</h2>
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="grid md:grid-cols-3 gap-8">
             {[
-              "React 19",
-              "Vite",
-              "Tailwind CSS",
-              "FastAPI",
-              "SQLAlchemy",
-              "WebAuthn",
-              "TypeScript",
-              "Python",
-            ].map((tech) => (
-              <Badge
-                key={tech}
-                variant="secondary"
-                className="text-lg py-2 px-4"
+              {
+                icon: Shield,
+                title: "Secure by Default",
+                desc: "Passkey authentication, RBAC, and secure headers out of the box.",
+              },
+              {
+                icon: Zap,
+                title: "Lightning Fast",
+                desc: "Optimized Vite build, React 19, and efficient API routes.",
+              },
+              {
+                icon: Layout,
+                title: "Modern UI",
+                desc: "Beautiful, accessible components built with Tailwind CSS.",
+              },
+              {
+                icon: Code2,
+                title: "Developer Experience",
+                desc: "TypeScript, hot reloading, and fully typed API client.",
+              },
+              {
+                icon: Users,
+                title: "User Management",
+                desc: "Complete flow for registration, login, and profile settings.",
+              },
+              {
+                icon: Globe,
+                title: "Edge Ready",
+                desc: "Deploy anywhere. Docker-ready and scalable architecture.",
+              },
+            ].map((feature, i) => (
+              <div
+                key={i}
+                className="bg-surface p-8 rounded-3xl border border-border hover:border-primary/50 transition-colors shadow-sm"
               >
-                {tech}
-              </Badge>
+                <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 text-primary">
+                  <feature.icon className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
+                <p className="text-text-muted leading-relaxed">
+                  {feature.desc}
+                </p>
+              </div>
             ))}
           </div>
         </div>
       </section>
+
+      {/* Pricing Section (Placeholder) */}
+      <section className="py-24 bg-surface px-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold tracking-tight mb-4">
+              Simple, transparent pricing
+            </h2>
+            <p className="text-text-muted text-lg">
+              Choose the plan that's right for you.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 items-center">
+            {/* Starter Plan */}
+            <div className="p-8 rounded-3xl border border-border bg-surface-alt/30">
+              <h3 className="font-semibold text-lg mb-2">Starter</h3>
+              <div className="text-4xl font-bold mb-6">Free</div>
+              <ul className="space-y-4 mb-8 text-text-muted">
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary" /> 1 User
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary" /> 5 Projects
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary" /> Community Support
+                </li>
+              </ul>
+              <Button variant="outline" className="w-full rounded-xl">
+                Get Started
+              </Button>
+            </div>
+
+            {/* Pro Plan */}
+            <div className="p-8 rounded-3xl border-2 border-primary bg-surface relative shadow-xl transform md:-translate-y-4">
+              <div className="absolute top-0 right-0 bg-primary text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-lg">
+                POPULAR
+              </div>
+              <h3 className="font-semibold text-lg mb-2">Pro</h3>
+              <div className="text-4xl font-bold mb-6">
+                $29<span className="text-lg text-text-muted font-normal">/mo</span>
+              </div>
+              <ul className="space-y-4 mb-8 text-text-muted">
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary" /> Unlimited Users
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary" /> Unlimited Projects
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary" /> Priority Support
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary" /> Advanced Analytics
+                </li>
+              </ul>
+              <Button size="lg" className="w-full rounded-xl">
+                Get Started
+              </Button>
+            </div>
+
+            {/* Enterprise Plan */}
+            <div className="p-8 rounded-3xl border border-border bg-surface-alt/30">
+              <h3 className="font-semibold text-lg mb-2">Enterprise</h3>
+              <div className="text-4xl font-bold mb-6">Custom</div>
+              <ul className="space-y-4 mb-8 text-text-muted">
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary" /> Dedicated Support
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary" /> SLA
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary" /> Custom Integrations
+                </li>
+              </ul>
+              <Button variant="outline" className="w-full rounded-xl">
+                Contact Sales
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 bg-surface border-t border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-2 font-bold text-lg">
+            <div className="p-1.5 bg-primary/10 rounded-lg">
+              <Code2 className="w-5 h-5 text-primary" />
+            </div>
+            <span>{"{{PROJECT_NAME}}"}</span>
+          </div>
+          <div className="flex gap-8 text-sm text-text-muted">
+            <a href="#" className="hover:text-text transition-colors">Product</a>
+            <a href="#" className="hover:text-text transition-colors">Features</a>
+            <a href="#" className="hover:text-text transition-colors">Pricing</a>
+            <a href="#" className="hover:text-text transition-colors">About</a>
+          </div>
+          <div className="text-sm text-text-muted">
+            &copy; {new Date().getFullYear()} {"{{PROJECT_NAME}}"}. All rights reserved.
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

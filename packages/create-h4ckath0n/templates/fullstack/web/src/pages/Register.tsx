@@ -1,89 +1,158 @@
 import { useState } from "react";
-import { Link } from "react-router";
-import { Fingerprint, UserPlus } from "lucide-react";
+import { Link, useNavigate } from "react-router";
 import { useAuth } from "../auth";
-import { Card, CardContent, CardHeader } from "../components/Card";
 import { Button } from "../components/Button";
 import { Input } from "../components/Input";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "../components/Card";
 import { Alert } from "../components/Alert";
+import { Fingerprint, Loader2 } from "lucide-react";
 
 export function Register() {
-  const { register, isAuthenticated } = useAuth();
-  const [displayName, setDisplayName] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const { registerPasskey, registerPassword } = useAuth();
+  const navigate = useNavigate();
 
-  if (isAuthenticated) {
-    return (
-      <div className="max-w-md mx-auto py-16 text-center">
-        <Alert variant="info">You are already registered and logged in.</Alert>
-      </div>
-    );
-  }
-
-  const handleRegister = async () => {
-    if (!displayName.trim()) {
-      setError("Please enter a display name");
-      return;
-    }
-    setLoading(true);
+  const handlePasskeyRegister = async () => {
+    if (!username) return;
     setError(null);
+    setIsLoading(true);
     try {
-      await register(displayName.trim());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed");
+      await registerPasskey(username);
+      navigate("/dashboard");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Passkey registration failed");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasswordRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username || !email || !password) return;
+
+    setError(null);
+    setIsLoading(true);
+    try {
+      await registerPassword(username, email, password);
+      navigate("/dashboard");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Registration failed");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto py-16">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-xl">
-              <UserPlus className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-text">Create Account</h2>
-              <p className="text-sm text-text-muted">Register with a passkey</p>
-            </div>
-          </div>
+    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-md shadow-lg border-primary/10">
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-2xl font-bold tracking-tight">
+            Create an account
+          </CardTitle>
+          <CardDescription>
+            Enter your details below to create your account
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="grid gap-6">
           {error && (
             <Alert variant="error" data-testid="register-error">
               {error}
             </Alert>
           )}
 
-          <Input
-            label="Display Name"
-            placeholder="Enter your name"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleRegister()}
-            data-testid="register-display-name"
-          />
-
           <Button
-            onClick={handleRegister}
-            disabled={loading}
-            className="w-full"
-            data-testid="register-submit"
+            onClick={handlePasskeyRegister}
+            disabled={isLoading || !username}
+            className="w-full h-12 text-base font-semibold"
+            size="lg"
+            data-testid="register-passkey-btn"
           >
-            <Fingerprint className="w-4 h-4" />
-            {loading ? "Creating account..." : "Register with Passkey"}
+            {isLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Fingerprint className="mr-2 h-5 w-5" />
+            )}
+            Register with Passkey
           </Button>
 
-          <p className="text-center text-sm text-text-muted">
-            Already have an account?{" "}
-            <Link to="/login" className="text-primary hover:underline">
-              Login
-            </Link>
-          </p>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-surface px-2 text-text-muted font-medium">
+                Or continue with password
+              </span>
+            </div>
+          </div>
+
+          <form onSubmit={handlePasswordRegister} className="space-y-4">
+            <Input
+              id="username"
+              label="Username"
+              type="text"
+              placeholder="johndoe"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={isLoading}
+              data-testid="register-username-input"
+              autoComplete="username"
+            />
+            <Input
+              id="email"
+              label="Email"
+              type="email"
+              placeholder="m@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
+              data-testid="register-email-input"
+              autoComplete="email"
+            />
+            <Input
+              id="password"
+              label="Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+              data-testid="register-password-input"
+              autoComplete="new-password"
+            />
+            <Button
+              type="submit"
+              variant="secondary"
+              disabled={isLoading || !username || !email || !password}
+              className="w-full"
+              data-testid="register-password-btn"
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Sign Up
+            </Button>
+          </form>
         </CardContent>
+        <CardFooter className="flex flex-col gap-4 text-center pb-8">
+          <div className="text-sm text-text-muted">
+            Already have an account?{" "}
+            <Link
+              to="/login"
+              className="font-medium text-primary underline-offset-4 hover:underline transition-colors"
+            >
+              Sign in
+            </Link>
+          </div>
+        </CardFooter>
       </Card>
     </div>
   );
