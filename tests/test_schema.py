@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from tests.conftest import run_cli
 
 

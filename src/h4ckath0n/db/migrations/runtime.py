@@ -12,7 +12,6 @@ from alembic import command as alembic_command
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from sqlalchemy import inspect
 from sqlalchemy.engine import Engine, create_engine, make_url
 
 # Must match env.py

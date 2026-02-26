@@ -5,9 +5,6 @@ from __future__ import annotations
 import argparse
 import importlib.resources
 import json
-import os
-import subprocess
-import sys
 
 from sqlalchemy.engine import make_url
 
@@ -15,10 +12,10 @@ import h4ckath0n.cli as cli_module
 from h4ckath0n.cli import (
     EXIT_BAD_ARGS,
     EXIT_LAST_PASSKEY,
-    EXIT_PROD_INIT,
     _normalize_db_url_for_sync,
     _normalize_scopes,
 )
+from tests.conftest import run_cli as _run_cli
 
 # ---------------------------------------------------------------------------
 # Packaged migrations tests
@@ -155,8 +152,6 @@ class TestNormalizeScopes:
 # ---------------------------------------------------------------------------
 # CLI integration (using subprocess to avoid sys.exit leaking)
 # ---------------------------------------------------------------------------
-
-from tests.conftest import run_cli as _run_cli
 
 
 class TestCLIHelp:
