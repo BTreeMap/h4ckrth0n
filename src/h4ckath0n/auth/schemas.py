@@ -5,24 +5,22 @@ from __future__ import annotations
 from pydantic import BaseModel, EmailStr, Field
 
 
-class RegisterRequest(BaseModel):
+class DeviceBindingMixin(BaseModel):
+    device_public_key_jwk: dict | None = Field(
+        None,
+        description="Optional device public key in JWK format to bind a device identity.",
+    )
+    device_label: str | None = Field(None, description="Optional label for the device.")
+
+
+class RegisterRequest(DeviceBindingMixin):
     email: EmailStr = Field(..., description="Account email for password-based signup.")
     password: str = Field(..., description="Plaintext password, hashed server-side.")
-    device_public_key_jwk: dict | None = Field(
-        None,
-        description="Optional device public key in JWK format to bind a device identity.",
-    )
-    device_label: str | None = Field(None, description="Optional label for the device.")
 
 
-class LoginRequest(BaseModel):
+class LoginRequest(DeviceBindingMixin):
     email: EmailStr = Field(..., description="Account email for password-based login.")
     password: str = Field(..., description="Plaintext password to verify.")
-    device_public_key_jwk: dict | None = Field(
-        None,
-        description="Optional device public key in JWK format to bind a device identity.",
-    )
-    device_label: str | None = Field(None, description="Optional label for the device.")
 
 
 class DeviceBindingResponse(BaseModel):
@@ -38,14 +36,9 @@ class PasswordResetRequestSchema(BaseModel):
     email: EmailStr = Field(..., description="Account email to send a reset token.")
 
 
-class PasswordResetConfirmSchema(BaseModel):
+class PasswordResetConfirmSchema(DeviceBindingMixin):
     token: str = Field(..., description="Password reset token issued by the server.")
     new_password: str = Field(..., description="New password to set for the account.")
-    device_public_key_jwk: dict | None = Field(
-        None,
-        description="Optional device public key in JWK format to bind a device identity.",
-    )
-    device_label: str | None = Field(None, description="Optional label for the device.")
 
 
 class MessageResponse(BaseModel):
