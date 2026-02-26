@@ -6,7 +6,10 @@ from sqlalchemy import engine_from_config, pool
 
 import h4ckath0n.auth.models  # noqa: F401 – register models with Base.metadata
 from h4ckath0n.db.base import Base
-from h4ckath0n.db.migrations.runtime import normalize_db_url_for_sync
+from h4ckath0n.db.migrations.runtime import (
+    VERSION_TABLE,
+    normalize_db_url_for_sync,
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -50,6 +53,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        version_table=VERSION_TABLE,
     )
 
     with context.begin_transaction():
@@ -70,7 +74,11 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            version_table=VERSION_TABLE,
+        )
 
         with context.begin_transaction():
             context.run_migrations()

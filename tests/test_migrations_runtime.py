@@ -12,6 +12,7 @@ from h4ckath0n.app import create_app
 from h4ckath0n.config import Settings
 from h4ckath0n.db.base import Base
 from h4ckath0n.db.migrations.runtime import (
+    VERSION_TABLE,
     SchemaStatus,
     get_schema_status,
     normalize_db_url_for_sync,
@@ -27,9 +28,9 @@ class TestMigrationStatusDetection:
         try:
             with engine.begin() as conn:
                 conn.execute(
-                    text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)")
+                    text(f"CREATE TABLE {VERSION_TABLE} (version_num VARCHAR(32) NOT NULL)")
                 )
-                conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('0001')"))
+                conn.execute(text(f"INSERT INTO {VERSION_TABLE} (version_num) VALUES ('0002')"))
             status = get_schema_status(db_url)
             assert status.state == "at_head"
             assert status.warning is None
@@ -42,9 +43,9 @@ class TestMigrationStatusDetection:
         try:
             with engine.begin() as conn:
                 conn.execute(
-                    text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)")
+                    text(f"CREATE TABLE {VERSION_TABLE} (version_num VARCHAR(32) NOT NULL)")
                 )
-                conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('0000')"))
+                conn.execute(text(f"INSERT INTO {VERSION_TABLE} (version_num) VALUES ('0001')"))
             status = get_schema_status(db_url)
             assert status.state == "behind"
             assert status.warning is not None
@@ -52,17 +53,17 @@ class TestMigrationStatusDetection:
         finally:
             engine.dispose()
 
-    def test_no_alembic_version_with_tables_warns_stamp_required(self, tmp_path):
-        db_url = f"sqlite:///{tmp_path}/stamp_required.db"
+    def test_no_alembic_version_with_tables_returns_fresh(self, tmp_path):
+        db_url = f"sqlite:///{tmp_path}/legacy.db"
         engine = create_engine(db_url, connect_args={"check_same_thread": False})
         try:
             import h4ckath0n.auth.models  # noqa: F401
 
             Base.metadata.create_all(engine)
             status = get_schema_status(db_url)
-            assert status.state == "stamp_required"
-            assert status.warning is not None
-            assert "h4ckath0n db migrate stamp --to <baseline> --yes" in status.warning
+            # Legacy/corrupt state (tables exist, no version table) now returns fresh
+            assert status.state == "fresh"
+            assert status.warning is None
         finally:
             engine.dispose()
 
