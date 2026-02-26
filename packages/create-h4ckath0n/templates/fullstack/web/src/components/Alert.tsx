@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { AlertCircle, CheckCircle, Info, XCircle } from "lucide-react";
+import { cn } from "../lib/utils";
 
 interface AlertProps {
   variant?: "info" | "success" | "warning" | "error";
@@ -25,13 +26,17 @@ const styles = {
 export function Alert({
   variant = "info",
   children,
-  className = "",
+  className,
   "data-testid": testId,
 }: AlertProps) {
   const Icon = icons[variant];
   return (
     <div
-      className={`flex items-start gap-3 p-4 rounded-2xl border ${styles[variant]} ${className}`}
+      className={cn(
+        "flex items-start gap-3 p-4 rounded-2xl border",
+        styles[variant],
+        className,
+      )}
       role="alert"
       data-testid={testId}
     >

@@ -1,36 +1,36 @@
-import type { InputHTMLAttributes } from "react";
+import { InputHTMLAttributes, forwardRef, useId } from "react";
+import { cn } from "../lib/utils";
+import { Label } from "./Label";
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
 }
 
-export function Input({
-  label,
-  error,
-  className = "",
-  id,
-  ...props
-}: InputProps) {
-  const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
-  return (
-    <div className="space-y-1.5">
-      {label && (
-        <label
-          htmlFor={inputId}
-          className="block text-sm font-medium text-text"
-        >
-          {label}
-        </label>
-      )}
-      <input
-        id={inputId}
-        className={`w-full px-3 py-2 bg-surface border border-border rounded-xl text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors ${
-          error ? "border-danger" : ""
-        } ${className}`}
-        {...props}
-      />
-      {error && <p className="text-sm text-danger">{error}</p>}
-    </div>
-  );
-}
+const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, label, error, id, ...props }, ref) => {
+    const generatedId = useId();
+    const inputId = id || generatedId;
+
+    return (
+      <div className="space-y-2">
+        {label && <Label htmlFor={inputId}>{label}</Label>}
+        <input
+          id={inputId}
+          type={type}
+          className={cn(
+            "flex h-10 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm ring-offset-surface file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+            error && "border-danger focus-visible:ring-danger",
+            className,
+          )}
+          ref={ref}
+          {...props}
+        />
+        {error && <p className="text-sm text-danger">{error}</p>}
+      </div>
+    );
+  },
+);
+Input.displayName = "Input";
+
+export { Input };
