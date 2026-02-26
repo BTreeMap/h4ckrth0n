@@ -1,6 +1,6 @@
 [project]
 name = "h4ckath0n"
-version = "0.1.8"
+version = "0.1.9"
 description = "Ship hackathon products fast with secure-by-default auth, RBAC, PostgreSQL readiness, and built-in LLM tooling."
 authors = [
     {name = "multiset", email = "h4ckath0n@oss.joefang.org"},

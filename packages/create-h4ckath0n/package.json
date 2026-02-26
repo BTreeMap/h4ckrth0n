@@ -1,6 +1,6 @@
 {
   "name": "h4ckath0n",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Create a full-stack hackathon project with passkeys and strong defaults",
   "license": "MIT",
   "type": "module",
