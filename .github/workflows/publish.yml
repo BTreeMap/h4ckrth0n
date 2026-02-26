@@ -196,7 +196,7 @@ jobs:
         run: uv build
 
       - name: Upload dist
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: python-dist
           path: dist/*
@@ -213,7 +213,7 @@ jobs:
       url: https://pypi.org/p/h4ckath0n
     steps:
       - name: Download dist
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: python-dist
           path: dist
@@ -271,7 +271,7 @@ jobs:
           npm pack --pack-destination ../../dist-npm
 
       - name: Upload npm dist
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: npm-dist
           path: dist-npm/*.tgz
@@ -287,7 +287,7 @@ jobs:
       name: npm
     steps:
       - name: Download npm dist
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: npm-dist
           path: dist-npm
@@ -461,7 +461,7 @@ jobs:
 
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: post-release-playwright-report
           path: ${{ steps.scaffold.outputs.app_dir }}/web/playwright-report/
