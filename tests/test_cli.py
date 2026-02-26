@@ -16,7 +16,6 @@ from h4ckath0n.cli import (
     EXIT_BAD_ARGS,
     EXIT_LAST_PASSKEY,
     EXIT_PROD_INIT,
-    EXIT_STAMP_REQUIRED,
     _normalize_db_url_for_sync,
     _normalize_scopes,
 )
@@ -157,20 +156,7 @@ class TestNormalizeScopes:
 # CLI integration (using subprocess to avoid sys.exit leaking)
 # ---------------------------------------------------------------------------
 
-
-def _run_cli(
-    *args: str, env_override: dict[str, str] | None = None
-) -> subprocess.CompletedProcess:
-    """Run the CLI via ``python -m h4ckath0n``."""
-    env = os.environ.copy()
-    if env_override:
-        env.update(env_override)
-    return subprocess.run(
-        [sys.executable, "-m", "h4ckath0n", *args],
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+from tests.conftest import run_cli as _run_cli
 
 
 class TestCLIHelp:
@@ -194,38 +180,13 @@ class TestCLIDbPing:
         assert data["schema_state"] == "fresh"
 
 
-class TestCLIDbInit:
-    def test_init_requires_yes(self, tmp_path):
-        db_url = f"sqlite:///{tmp_path}/init_test.db"
-        result = _run_cli("db", "init", "--db", db_url)
-        assert result.returncode == EXIT_BAD_ARGS
-
-    def test_init_success(self, tmp_path):
-        db_url = f"sqlite:///{tmp_path}/init_test.db"
+class TestCLIDbInitRemoved:
+    def test_init_returns_error(self, tmp_path):
+        """Test that db init is removed and returns error."""
+        db_url = f"sqlite:///{tmp_path}/init_removed.db"
         result = _run_cli("db", "init", "--db", db_url, "--yes")
-        assert result.returncode == 0
-        data = json.loads(result.stdout)
-        assert data["ok"] is True
-
-    def test_init_blocked_in_production(self, tmp_path):
-        db_url = f"sqlite:///{tmp_path}/init_test.db"
-        result = _run_cli(
-            "db", "init", "--db", db_url, "--yes", env_override={"H4CKATH0N_ENV": "production"}
-        )
-        assert result.returncode == EXIT_PROD_INIT
-
-    def test_init_production_with_force(self, tmp_path):
-        db_url = f"sqlite:///{tmp_path}/init_test.db"
-        result = _run_cli(
-            "db",
-            "init",
-            "--db",
-            db_url,
-            "--yes",
-            "--force",
-            env_override={"H4CKATH0N_ENV": "production"},
-        )
-        assert result.returncode == 0
+        # Should be an invalid choice exit code (usually 2 for argparse)
+        assert result.returncode != 0
 
 
 class TestCLIDbMigrate:
@@ -239,10 +200,11 @@ class TestCLIDbMigrate:
         result = _run_cli("db", "migrate", "upgrade", "--to", "head", "--db", db_url, "--yes")
         assert result.returncode == 0, result.stderr
 
-    def test_stamp_requires_yes(self, tmp_path):
+    def test_stamp_removed(self, tmp_path):
         db_url = f"sqlite:///{tmp_path}/stamp_test.db"
         result = _run_cli("db", "migrate", "stamp", "--to", "0001", "--db", db_url)
-        assert result.returncode == EXIT_BAD_ARGS
+        # Should be an invalid command or argument now
+        assert result.returncode != 0
 
     def test_current(self, tmp_path):
         db_url = f"sqlite:///{tmp_path}/current_test.db"
@@ -260,14 +222,6 @@ class TestCLIDbMigrate:
         result = _run_cli("db", "migrate", "heads", "--db", db_url)
         assert result.returncode == 0
 
-    def test_upgrade_safety_gate(self, tmp_path):
-        """If h4ckath0n tables exist without alembic_version, exit 6."""
-        db_url = f"sqlite:///{tmp_path}/gate_test.db"
-        # First create tables via db init
-        _run_cli("db", "init", "--db", db_url, "--yes")
-        # Now try upgrade – should detect existing tables without alembic_version
-        result = _run_cli("db", "migrate", "upgrade", "--to", "head", "--db", db_url, "--yes")
-        assert result.returncode == EXIT_STAMP_REQUIRED
 
 
 class TestCLIUsersOperations:

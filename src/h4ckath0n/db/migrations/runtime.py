@@ -15,6 +15,8 @@ from alembic.script import ScriptDirectory
 from sqlalchemy import inspect
 from sqlalchemy.engine import Engine, create_engine, make_url
 
+# Must match env.py
+VERSION_TABLE = "h4ckath0n_alembic_version"
 
 class PackagedMigrationsError(RuntimeError):
     """Raised when packaged migrations cannot be found."""
@@ -92,24 +94,15 @@ def get_schema_status(db_url: str) -> SchemaStatus:
         script = ScriptDirectory.from_config(cfg)
         head_revisions = tuple(sorted(script.get_heads()))
 
-    import h4ckath0n.auth.models  # noqa: F401
-    from h4ckath0n.db.base import Base
-
     engine = create_sync_engine(sync_url)
     try:
         with engine.connect() as conn:
-            inspector = inspect(conn)
-            table_names = set(inspector.get_table_names())
-            has_alembic = "alembic_version" in table_names
+            # Check for version table
+            migration_ctx = MigrationContext.configure(
+                conn, opts={"version_table": VERSION_TABLE}
+            )
+            current_revisions = tuple(sorted(migration_ctx.get_current_heads()))
 
-            if has_alembic:
-                migration_ctx = MigrationContext.configure(conn)
-                current_revisions = tuple(sorted(migration_ctx.get_current_heads()))
-            else:
-                current_revisions = tuple()
-
-        h4_tables = set(Base.metadata.tables.keys())
-        has_h4_tables = bool(h4_tables & table_names)
     finally:
         engine.dispose()
 
@@ -121,20 +114,10 @@ def get_schema_status(db_url: str) -> SchemaStatus:
             warning=None,
         )
 
-    if not current_revisions and has_h4_tables:
-        return SchemaStatus(
-            state="stamp_required",
-            current_revisions=current_revisions,
-            head_revisions=head_revisions,
-            warning=(
-                "database appears initialized without alembic versioning; "
-                "run h4ckath0n db migrate stamp --to <baseline> --yes "
-                "(for current releases, use <baseline>=head), then "
-                "h4ckath0n db migrate upgrade --to head --yes"
-            ),
-        )
-
-    if not current_revisions and not has_h4_tables:
+    if not current_revisions:
+        # We assume fresh if no version table exists.
+        # If tables exist but no version table, Alembic will fail on upgrade anyway,
+        # which is the desired "breaking change" behavior (no implicit stamping).
         return SchemaStatus(
             state="fresh",
             current_revisions=current_revisions,
@@ -155,29 +138,14 @@ def get_schema_status(db_url: str) -> SchemaStatus:
 
 
 def run_upgrade_to_head_sync(db_url: str) -> SchemaStatus:
-    """Upgrade schema to head using packaged migrations.
-
-    For a fresh database, initialize schema with create_all and stamp head.
-    """
+    """Upgrade schema to head using packaged migrations."""
     sync_url = normalize_db_url_for_sync(db_url)
-    status = get_schema_status(sync_url)
-    if status.state == "stamp_required":
-        return status
+    # We no longer check for stamp_required or try to fix legacy DBs.
 
     with packaged_migrations_dir() as migrations_dir:
         cfg = _alembic_config(sync_url, migrations_dir)
-        if status.state == "fresh":
-            import h4ckath0n.auth.models  # noqa: F401
-            from h4ckath0n.db.base import Base
-
-            engine = create_sync_engine(sync_url)
-            try:
-                Base.metadata.create_all(engine)
-            finally:
-                engine.dispose()
-            alembic_command.stamp(cfg, "head")
-        else:
-            alembic_command.upgrade(cfg, "head")
+        # Always run upgrade. If tables exist and conflict, Alembic raises error.
+        alembic_command.upgrade(cfg, "head")
 
     return get_schema_status(sync_url)
 
