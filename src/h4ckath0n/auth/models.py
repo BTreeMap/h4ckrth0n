@@ -26,7 +26,7 @@ def _utcnow() -> datetime:
 
 
 class User(Base):
-    __tablename__ = "users"
+    __tablename__ = "h4ckath0n_users"
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_user_id)
     role: Mapped[str] = mapped_column(String(20), nullable=False, default="user")
@@ -47,7 +47,7 @@ class User(Base):
 
 
 class WebAuthnCredential(Base):
-    __tablename__ = "webauthn_credentials"
+    __tablename__ = "h4ckath0n_webauthn_credentials"
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_key_id)
     user_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
@@ -68,7 +68,7 @@ class WebAuthnCredential(Base):
 
 
 class WebAuthnChallenge(Base):
-    __tablename__ = "webauthn_challenges"
+    __tablename__ = "h4ckath0n_webauthn_challenges"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     challenge: Mapped[str] = mapped_column(Text, nullable=False)  # base64url-encoded
@@ -82,7 +82,7 @@ class WebAuthnChallenge(Base):
     rp_id: Mapped[str] = mapped_column(String(255), nullable=False)
     origin: Mapped[str] = mapped_column(String(512), nullable=False)
 
-    __table_args__ = (Index("ix_webauthn_challenges_expires_at", "expires_at"),)
+    __table_args__ = (Index("ix_h4ckath0n_webauthn_challenges_expires_at", "expires_at"),)
 
 
 # ---------------------------------------------------------------------------
@@ -91,7 +91,7 @@ class WebAuthnChallenge(Base):
 
 
 class PasswordResetToken(Base):
-    __tablename__ = "password_reset_tokens"
+    __tablename__ = "h4ckath0n_password_reset_tokens"
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_token_id)
     user_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
@@ -107,7 +107,7 @@ class PasswordResetToken(Base):
 
 
 class Device(Base):
-    __tablename__ = "devices"
+    __tablename__ = "h4ckath0n_devices"
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_device_id)
     user_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)

@@ -175,14 +175,14 @@ describe("Settings – theme preference", () => {
     mockMatchMedia(false);
     render(<Settings />, { wrapper });
 
-    expect(await screen.findByRole("radio", { name: "System" })).toBeChecked();
+    expect(await screen.findByRole("radio", { name: "system" })).toBeChecked();
   });
 
   it("selecting dark persists preference and applies dark theme", async () => {
     mockMatchMedia(false);
     render(<Settings />, { wrapper });
 
-    fireEvent.click(await screen.findByRole("radio", { name: "Dark" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "dark" }));
     expect(localStorage.getItem("theme-preference")).toBe("dark");
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
   });
@@ -192,7 +192,7 @@ describe("Settings – theme preference", () => {
     localStorage.setItem("theme-preference", "dark");
     render(<Settings />, { wrapper });
 
-    fireEvent.click(await screen.findByRole("radio", { name: "System" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "system" }));
     expect(localStorage.getItem("theme-preference")).toBe("system");
     expect(document.documentElement.getAttribute("data-theme")).toBe("light");
   });

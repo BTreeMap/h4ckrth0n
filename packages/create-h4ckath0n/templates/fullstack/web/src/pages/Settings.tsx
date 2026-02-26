@@ -8,12 +8,25 @@ import {
   Pencil,
   Check,
   X,
+  Loader2,
+  Monitor,
+  Moon,
+  Sun,
+  Shield,
 } from "lucide-react";
 import { apiFetch } from "../auth";
 import { toCreateOptions, serializeCreateResponse } from "../auth/webauthn";
-import { Card, CardContent, CardHeader } from "../components/Card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/Card";
 import { Button } from "../components/Button";
 import { Alert } from "../components/Alert";
+import { Input } from "../components/Input";
+import { Badge } from "../components/Badge";
 import api from "../api/client";
 import type { PasskeyInfo } from "../api/types";
 import {
@@ -21,6 +34,7 @@ import {
   readThemePreference,
   type ThemePreference,
 } from "../theme";
+import { cn } from "../lib/utils";
 
 const MAX_NAME_LENGTH = 64;
 
@@ -75,38 +89,42 @@ function PasskeyName({
 
   if (editing) {
     return (
-      <div className="flex flex-col gap-1" data-testid="passkey-rename-form">
-        <div className="flex items-center gap-1">
-          <input
+      <div className="flex flex-col gap-2" data-testid="passkey-rename-form">
+        <div className="flex items-center gap-2">
+          <Input
             data-testid="passkey-name-input"
             type="text"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             maxLength={MAX_NAME_LENGTH}
-            className="text-sm border rounded px-2 py-0.5 w-48 bg-surface text-text border-border"
+            className="h-8 w-48"
             autoFocus
             onKeyDown={(e) => {
               if (e.key === "Enter") save();
               if (e.key === "Escape") cancel();
             }}
           />
-          <button
+          <Button
+            size="icon"
+            variant="ghost"
             data-testid="passkey-name-save"
             onClick={save}
             disabled={saving}
-            className="p-1 text-success hover:bg-surface-hover rounded"
+            className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
             aria-label="Save name"
           >
-            <Check className="w-3.5 h-3.5" />
-          </button>
-          <button
+            <Check className="w-4 h-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
             data-testid="passkey-name-cancel"
             onClick={cancel}
-            className="p-1 text-text-muted hover:bg-surface-hover rounded"
+            className="h-8 w-8 text-text-muted hover:text-text"
             aria-label="Cancel rename"
           >
-            <X className="w-3.5 h-3.5" />
-          </button>
+            <X className="w-4 h-4" />
+          </Button>
         </div>
         {error && (
           <span
@@ -121,21 +139,23 @@ function PasskeyName({
   }
 
   return (
-    <span className="inline-flex items-center gap-1">
-      <span data-testid="passkey-name">
+    <div className="flex items-center gap-2 group">
+      <span className="font-medium" data-testid="passkey-name">
         {passkey.name || "Unnamed passkey"}
       </span>
       {!passkey.revoked_at && (
-        <button
+        <Button
+          size="icon"
+          variant="ghost"
           data-testid="passkey-edit-btn"
           onClick={startEdit}
-          className="p-0.5 text-text-muted hover:text-text rounded"
+          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
           aria-label="Edit passkey name"
         >
           <Pencil className="w-3 h-3" />
-        </button>
+        </Button>
       )}
-    </span>
+    </div>
   );
 }
 
@@ -234,14 +254,12 @@ export function Settings() {
     }
   };
 
-  const activePasskeys = passkeys?.filter((p) => !p.revoked_at) ?? [];
-
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
       <div>
-        <h1 className="text-2xl font-bold text-text">Settings</h1>
-        <p className="text-text-muted">
-          Manage your passkeys and account security
+        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <p className="text-text-muted mt-2">
+          Manage your account settings and preferences.
         </p>
       </div>
 
@@ -261,15 +279,22 @@ export function Settings() {
 
       <Card>
         <CardHeader>
-          <h2 className="text-lg font-semibold text-text">Theme</h2>
+          <CardTitle>Appearance</CardTitle>
+          <CardDescription>
+            Customize how the application looks properly.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <fieldset className="space-y-2">
-            <legend className="sr-only">Theme preference</legend>
-            {(["system", "light", "dark"] as const).map((option) => (
+          <div className="grid grid-cols-3 gap-4 max-w-lg">
+            {(["light", "dark", "system"] as const).map((option) => (
               <label
                 key={option}
-                className="flex items-center gap-2 text-sm text-text"
+                className={cn(
+                  "cursor-pointer rounded-xl border-2 p-4 hover:bg-surface-alt transition-all",
+                  themePreference === option
+                    ? "border-primary bg-primary/5"
+                    : "border-border",
+                )}
               >
                 <input
                   type="radio"
@@ -280,52 +305,61 @@ export function Settings() {
                     setThemePreference(option);
                     applyThemePreference(option);
                   }}
+                  className="sr-only"
                 />
-                {option === "system"
-                  ? "System"
-                  : option === "light"
-                    ? "Light"
-                    : "Dark"}
+                <div className="flex flex-col items-center gap-2">
+                  {option === "light" && <Sun className="w-6 h-6" />}
+                  {option === "dark" && <Moon className="w-6 h-6" />}
+                  {option === "system" && <Monitor className="w-6 h-6" />}
+                  <span className="text-sm font-medium capitalize">
+                    {option}
+                  </span>
+                </div>
               </label>
             ))}
-          </fieldset>
+          </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Fingerprint className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold text-text">Passkeys</h2>
-            <span className="text-sm text-text-muted">
-              ({activePasskeys.length} active)
-            </span>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div className="space-y-1">
+            <CardTitle>Security</CardTitle>
+            <CardDescription>
+              Manage your passkeys and access methods.
+            </CardDescription>
           </div>
           <Button
-            size="sm"
             onClick={handleAddPasskey}
             disabled={addLoading}
             data-testid="add-passkey-btn"
           >
-            <Plus className="w-4 h-4" />
-            {addLoading ? "Adding..." : "Add Passkey"}
+            {addLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="mr-2 h-4 w-4" />
+            )}
+            Add Passkey
           </Button>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : passkeys && passkeys.length > 0 ? (
-            <div className="divide-y divide-border">
+            <div className="space-y-4">
               {passkeys.map((passkey) => (
                 <div
                   key={passkey.id}
-                  className="flex items-center justify-between py-3"
+                  className="flex items-center justify-between p-4 rounded-xl border border-border bg-surface-alt/30"
                   data-testid="passkey-item"
                 >
-                  <div>
-                    <div className="text-sm font-medium text-text">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-surface rounded-lg border border-border">
+                      <Fingerprint className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
                       <PasskeyName
                         passkey={passkey}
                         onRenamed={() =>
@@ -334,36 +368,33 @@ export function Settings() {
                           })
                         }
                       />
-                      {passkey.revoked_at && (
-                        <span className="ml-2 text-xs text-danger">
-                          (revoked)
+                      <div className="flex items-center gap-2 text-xs text-text-muted mt-1">
+                        <span className="font-mono">
+                          {passkey.id.slice(0, 8)}...
                         </span>
-                      )}
+                        <span>•</span>
+                        <span>
+                          Created{" "}
+                          {new Date(passkey.created_at).toLocaleDateString()}
+                        </span>
+                        {passkey.revoked_at && (
+                          <Badge variant="destructive" className="ml-2">
+                            Revoked
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-xs text-text-muted font-mono">
-                      {passkey.id}
-                    </p>
-                    <p className="text-xs text-text-muted">
-                      Created:{" "}
-                      {new Date(passkey.created_at).toLocaleDateString()}
-                      {passkey.last_used_at && (
-                        <>
-                          {" "}
-                          | Last used:{" "}
-                          {new Date(passkey.last_used_at).toLocaleDateString()}
-                        </>
-                      )}
-                    </p>
                   </div>
                   {!passkey.revoked_at && (
                     <Button
-                      variant="danger"
+                      variant="ghost"
                       size="sm"
+                      className="text-danger hover:text-danger hover:bg-danger/10"
                       onClick={() => revokeMutation.mutate(passkey.id)}
                       disabled={revokeMutation.isPending}
                       data-testid="revoke-passkey-btn"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-4 h-4 mr-2" />
                       Revoke
                     </Button>
                   )}
@@ -371,9 +402,14 @@ export function Settings() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-text-muted py-4 text-center">
-              No passkeys found.
-            </p>
+            <div className="text-center py-12 border border-dashed border-border rounded-xl">
+              <Shield className="w-12 h-12 text-text-muted mx-auto mb-4" />
+              <h3 className="text-lg font-medium">No passkeys found</h3>
+              <p className="text-text-muted max-w-sm mx-auto mt-2">
+                Add a passkey to enable secure, passwordless authentication for
+                your account.
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>

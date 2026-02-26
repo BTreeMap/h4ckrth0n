@@ -33,7 +33,6 @@ EXIT_BAD_ARGS = 2
 EXIT_LAST_PASSKEY = 3
 EXIT_MIGRATIONS_MISSING = 4
 EXIT_PROD_INIT = 5
-EXIT_STAMP_REQUIRED = 6
 
 
 # ---------------------------------------------------------------------------
@@ -195,30 +194,6 @@ def _cmd_db_ping(args: argparse.Namespace) -> int:
         engine.dispose()
 
 
-def _cmd_db_init(args: argparse.Namespace) -> int:
-    if not _require_yes(args):
-        return EXIT_BAD_ARGS
-
-    env = os.environ.get("H4CKATH0N_ENV", "development")
-    if env == "production" and not getattr(args, "force", False):
-        _err(
-            "db init is not allowed in production without --force; use db migrate upgrade instead"
-        )
-        return EXIT_PROD_INIT
-
-    url = _normalize_db_url_for_sync(_get_db_url(args))
-    engine = _make_sync_engine(url)
-    try:
-        import h4ckath0n.auth.models  # noqa: F401 – register models
-        from h4ckath0n.db.base import Base
-
-        Base.metadata.create_all(engine)
-        _output({"ok": True}, fmt=args.format, pretty=args.pretty)
-        return EXIT_OK
-    finally:
-        engine.dispose()
-
-
 def _cmd_db_migrate_upgrade(args: argparse.Namespace) -> int:
     if not _require_yes(args):
         return EXIT_BAD_ARGS
@@ -227,13 +202,8 @@ def _cmd_db_migrate_upgrade(args: argparse.Namespace) -> int:
     revision = getattr(args, "to", "head")
     try:
         if revision == "head":
-            status = run_upgrade_to_head(url)
-            if status.state == "stamp_required":
-                _err(
-                    "database appears initialized without alembic; "
-                    "run db migrate stamp --to <rev> first"
-                )
-                return EXIT_STAMP_REQUIRED
+            # Using our high-level helper which handles fresh install nicely
+            run_upgrade_to_head(url)
         else:
             with packaged_migrations_dir() as migrations_path:
                 cfg = Config()
@@ -293,30 +263,6 @@ def _cmd_db_migrate_heads(args: argparse.Namespace) -> int:
             cfg.set_main_option("script_location", str(migrations_path))
             cfg.set_main_option("sqlalchemy.url", url)
             alembic_command.heads(cfg)
-        return EXIT_OK
-    except PackagedMigrationsError:
-        _err("packaged migrations not found; installation may be broken")
-        return EXIT_MIGRATIONS_MISSING
-
-
-def _cmd_db_migrate_stamp(args: argparse.Namespace) -> int:
-    if not _require_yes(args):
-        return EXIT_BAD_ARGS
-
-    url = _normalize_db_url_for_sync(_get_db_url(args))
-
-    revision = getattr(args, "to", None)
-    if not revision:
-        _err("--to is required for stamp")
-        return EXIT_BAD_ARGS
-
-    try:
-        with packaged_migrations_dir() as migrations_path:
-            cfg = Config()
-            cfg.set_main_option("script_location", str(migrations_path))
-            cfg.set_main_option("sqlalchemy.url", url)
-            alembic_command.stamp(cfg, revision)
-        _output({"ok": True, "revision": revision}, fmt=args.format, pretty=args.pretty)
         return EXIT_OK
     except PackagedMigrationsError:
         _err("packaged migrations not found; installation may be broken")
@@ -764,13 +710,7 @@ def _build_parser() -> argparse.ArgumentParser:
     # db ping
     db_sub.add_parser("ping", parents=[common], help="Check database connectivity")
 
-    # db init
-    db_init = db_sub.add_parser(
-        "init", parents=[common], help="Initialize database with create_all"
-    )
-    db_init.add_argument("--yes", action="store_true", help="Confirm mutation")
-    db_init.add_argument("--force", action="store_true", help="Allow in production")
-
+    # db init -> REMOVED
     # db migrate
     db_migrate = db_sub.add_parser("migrate", help="Run Alembic migrations")
     migrate_sub = db_migrate.add_subparsers(dest="migrate_command")
@@ -793,12 +733,7 @@ def _build_parser() -> argparse.ArgumentParser:
     # db migrate heads
     migrate_sub.add_parser("heads", parents=[common], help="Show head revisions")
 
-    # db migrate stamp
-    mig_stamp = migrate_sub.add_parser(
-        "stamp", parents=[common], help="Stamp database with revision"
-    )
-    mig_stamp.add_argument("--to", required=True, help="Revision to stamp")
-    mig_stamp.add_argument("--yes", action="store_true", help="Confirm mutation")
+    # db migrate stamp -> REMOVED
 
     # ---- users ----
     users_parser = subparsers.add_parser("users", help="User management")
@@ -912,8 +847,7 @@ def main() -> int:
         db_cmd = getattr(args, "db_command", None)
         if db_cmd == "ping":
             return _cmd_db_ping(args)
-        if db_cmd == "init":
-            return _cmd_db_init(args)
+        # db init removed
         if db_cmd == "migrate":
             migrate_cmd = getattr(args, "migrate_command", None)
             if migrate_cmd == "upgrade":
@@ -924,8 +858,7 @@ def main() -> int:
                 return _cmd_db_migrate_current(args)
             if migrate_cmd == "heads":
                 return _cmd_db_migrate_heads(args)
-            if migrate_cmd == "stamp":
-                return _cmd_db_migrate_stamp(args)
+            # db migrate stamp removed
             parser.parse_args(["db", "migrate", "--help"])
             return EXIT_BAD_ARGS
         parser.parse_args(["db", "--help"])

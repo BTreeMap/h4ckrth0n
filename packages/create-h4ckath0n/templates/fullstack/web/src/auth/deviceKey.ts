@@ -15,6 +15,12 @@ export interface DeviceIdentity {
   userId: string;
 }
 
+// Caches for in-memory access
+let cachedIdentity: DeviceIdentity | null = null;
+let identityLoaded = false;
+let cachedKeyMaterial: DeviceKeyMaterial | null = null;
+let keyMaterialLoaded = false;
+
 export async function ensureDeviceKeyMaterial(): Promise<DeviceKeyMaterial> {
   const existing = await loadDeviceKeyMaterial();
   if (existing) return existing;
@@ -22,10 +28,20 @@ export async function ensureDeviceKeyMaterial(): Promise<DeviceKeyMaterial> {
 }
 
 async function loadDeviceKeyMaterial(): Promise<DeviceKeyMaterial | null> {
-  const privateKey = await get<CryptoKey>(DB_PRIVATE_KEY);
-  const publicJwk = await get<JsonWebKey>(DB_PUBLIC_JWK);
-  if (privateKey && publicJwk) return { privateKey, publicJwk };
-  return null;
+  if (keyMaterialLoaded) return cachedKeyMaterial;
+
+  const [privateKey, publicJwk] = await Promise.all([
+    get<CryptoKey>(DB_PRIVATE_KEY),
+    get<JsonWebKey>(DB_PUBLIC_JWK),
+  ]);
+
+  if (privateKey && publicJwk) {
+    cachedKeyMaterial = { privateKey, publicJwk };
+  } else {
+    cachedKeyMaterial = null;
+  }
+  keyMaterialLoaded = true;
+  return cachedKeyMaterial;
 }
 
 async function generateDeviceKeyMaterial(): Promise<DeviceKeyMaterial> {
@@ -35,39 +51,67 @@ async function generateDeviceKeyMaterial(): Promise<DeviceKeyMaterial> {
     ["sign", "verify"],
   );
   const publicJwk = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
-  await set(DB_PRIVATE_KEY, keyPair.privateKey);
-  await set(DB_PUBLIC_JWK, publicJwk);
-  return { privateKey: keyPair.privateKey, publicJwk };
+
+  await Promise.all([
+    set(DB_PRIVATE_KEY, keyPair.privateKey),
+    set(DB_PUBLIC_JWK, publicJwk),
+  ]);
+
+  cachedKeyMaterial = { privateKey: keyPair.privateKey, publicJwk };
+  keyMaterialLoaded = true;
+  return cachedKeyMaterial;
 }
 
 export async function getPrivateKey(): Promise<CryptoKey | null> {
-  return (await get<CryptoKey>(DB_PRIVATE_KEY)) ?? null;
+  const material = await loadDeviceKeyMaterial();
+  return material?.privateKey ?? null;
 }
 
 export async function getPublicJwk(): Promise<JsonWebKey | null> {
-  return (await get<JsonWebKey>(DB_PUBLIC_JWK)) ?? null;
+  const material = await loadDeviceKeyMaterial();
+  return material?.publicJwk ?? null;
 }
 
 export async function getDeviceIdentity(): Promise<DeviceIdentity | null> {
-  const deviceId = await get<string>(DB_DEVICE_ID);
-  const userId = await get<string>(DB_USER_ID);
-  if (deviceId && userId) return { deviceId, userId };
-  return null;
+  if (identityLoaded) return cachedIdentity;
+
+  const [deviceId, userId] = await Promise.all([
+    get<string>(DB_DEVICE_ID),
+    get<string>(DB_USER_ID),
+  ]);
+
+  if (deviceId && userId) {
+    cachedIdentity = { deviceId, userId };
+  } else {
+    cachedIdentity = null;
+  }
+  identityLoaded = true;
+  return cachedIdentity;
 }
 
 export async function setDeviceIdentity(
   deviceId: string,
   userId: string,
 ): Promise<void> {
-  await set(DB_DEVICE_ID, deviceId);
-  await set(DB_USER_ID, userId);
+  await Promise.all([
+    set(DB_DEVICE_ID, deviceId),
+    set(DB_USER_ID, userId),
+  ]);
+  cachedIdentity = { deviceId, userId };
+  identityLoaded = true;
 }
 
 export async function clearDeviceKeyMaterial(): Promise<void> {
-  await del(DB_PRIVATE_KEY);
-  await del(DB_PUBLIC_JWK);
-  await del(DB_DEVICE_ID);
-  await del(DB_USER_ID);
+  await Promise.all([
+    del(DB_PRIVATE_KEY),
+    del(DB_PUBLIC_JWK),
+    del(DB_DEVICE_ID),
+    del(DB_USER_ID),
+  ]);
+  cachedIdentity = null;
+  identityLoaded = true;
+  cachedKeyMaterial = null;
+  keyMaterialLoaded = true;
 }
 
 /**
@@ -77,6 +121,10 @@ export async function clearDeviceKeyMaterial(): Promise<void> {
  * reused on next login.
  */
 export async function clearDeviceAuthorization(): Promise<void> {
-  await del(DB_DEVICE_ID);
-  await del(DB_USER_ID);
+  await Promise.all([
+    del(DB_DEVICE_ID),
+    del(DB_USER_ID),
+  ]);
+  cachedIdentity = null;
+  identityLoaded = true;
 }

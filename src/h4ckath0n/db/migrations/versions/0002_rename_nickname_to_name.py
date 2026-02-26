@@ -1,8 +1,8 @@
 """rename nickname to name on webauthn_credentials
 
-Revision ID: 0001
-Revises:
-Create Date: 2025-01-01 00:00:00.000000
+Revision ID: 0002
+Revises: 0001
+Create Date: 2025-01-02 00:00:00.000000
 
 Safe, additive migration:
   - Renames the existing nullable `nickname` column to `name`.
@@ -15,15 +15,15 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers
-revision = "0001"
-down_revision = None
+revision = "0002"
+down_revision = "0001"
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
     # Batch mode for SQLite compatibility (ALTER TABLE limitations).
-    with op.batch_alter_table("webauthn_credentials") as batch_op:
+    with op.batch_alter_table("h4ckath0n_webauthn_credentials") as batch_op:
         batch_op.alter_column(
             "nickname",
             new_column_name="name",
@@ -34,7 +34,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    with op.batch_alter_table("webauthn_credentials") as batch_op:
+    with op.batch_alter_table("h4ckath0n_webauthn_credentials") as batch_op:
         batch_op.alter_column(
             "name",
             new_column_name="nickname",
