@@ -6,6 +6,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from h4ckath0n.auth.schemas import DeviceBindingMixin
+
 # -- Registration --
 
 
@@ -17,17 +19,12 @@ class PasskeyRegisterStartResponse(BaseModel):
     )
 
 
-class PasskeyRegisterFinishRequest(BaseModel):
+class PasskeyRegisterFinishRequest(DeviceBindingMixin):
     flow_id: str = Field(..., description="Flow ID returned by register/start.")
     credential: dict = Field(
         ...,
         description="Browser PublicKeyCredential response as JSON.",
     )
-    device_public_key_jwk: dict | None = Field(
-        None,
-        description="Optional device public key in JWK format to bind a device identity.",
-    )
-    device_label: str | None = Field(None, description="Optional label for the device.")
 
 
 # -- Authentication --
@@ -41,17 +38,12 @@ class PasskeyLoginStartResponse(BaseModel):
     )
 
 
-class PasskeyLoginFinishRequest(BaseModel):
+class PasskeyLoginFinishRequest(DeviceBindingMixin):
     flow_id: str = Field(..., description="Flow ID returned by login/start.")
     credential: dict = Field(
         ...,
         description="Browser PublicKeyCredential response as JSON.",
     )
-    device_public_key_jwk: dict | None = Field(
-        None,
-        description="Optional device public key in JWK format to bind a device identity.",
-    )
-    device_label: str | None = Field(None, description="Optional label for the device.")
 
 
 # -- Add credential (authenticated) --
@@ -65,17 +57,12 @@ class PasskeyAddStartResponse(BaseModel):
     )
 
 
-class PasskeyAddFinishRequest(BaseModel):
+class PasskeyAddFinishRequest(DeviceBindingMixin):
     flow_id: str = Field(..., description="Flow ID returned by add/start.")
     credential: dict = Field(
         ...,
         description="Browser PublicKeyCredential response as JSON.",
     )
-    device_public_key_jwk: dict | None = Field(
-        None,
-        description="Optional device public key in JWK format to bind a device identity.",
-    )
-    device_label: str | None = Field(None, description="Optional label for the device.")
 
 
 # -- List / revoke --
