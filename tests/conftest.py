@@ -4,9 +4,8 @@ import os
 import subprocess
 import sys
 
-def run_cli(
-    *args: str, env_override: dict[str, str] | None = None
-) -> subprocess.CompletedProcess:
+
+def run_cli(*args: str, env_override: dict[str, str] | None = None) -> subprocess.CompletedProcess:
     """Run the CLI via ``python -m h4ckath0n``."""
     env = os.environ.copy()
     if env_override:

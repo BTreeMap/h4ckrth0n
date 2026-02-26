@@ -223,7 +223,6 @@ class TestCLIDbMigrate:
         assert result.returncode == 0
 
 
-
 class TestCLIUsersOperations:
     def _init_db(self, tmp_path):
         db_url = f"sqlite:///{tmp_path}/users_test.db"

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from tests.conftest import run_cli
 
+
 class TestSchemaPrefix:
     def test_tables_have_prefix(self, tmp_path):
         db_url = f"sqlite:///{tmp_path}/prefix_test.db"
@@ -14,6 +15,7 @@ class TestSchemaPrefix:
 
         # Check tables using sqlite3
         import sqlite3
+
         conn = sqlite3.connect(f"{tmp_path}/prefix_test.db")
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
@@ -26,7 +28,7 @@ class TestSchemaPrefix:
             "h4ckath0n_webauthn_challenges",
             "h4ckath0n_password_reset_tokens",
             "h4ckath0n_devices",
-            "h4ckath0n_alembic_version"
+            "h4ckath0n_alembic_version",
         ]
 
         for table in expected_tables:

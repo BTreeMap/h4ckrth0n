@@ -18,6 +18,7 @@ from sqlalchemy.engine import Engine, create_engine, make_url
 # Must match env.py
 VERSION_TABLE = "h4ckath0n_alembic_version"
 
+
 class PackagedMigrationsError(RuntimeError):
     """Raised when packaged migrations cannot be found."""
 
@@ -98,9 +99,7 @@ def get_schema_status(db_url: str) -> SchemaStatus:
     try:
         with engine.connect() as conn:
             # Check for version table
-            migration_ctx = MigrationContext.configure(
-                conn, opts={"version_table": VERSION_TABLE}
-            )
+            migration_ctx = MigrationContext.configure(conn, opts={"version_table": VERSION_TABLE})
             current_revisions = tuple(sorted(migration_ctx.get_current_heads()))
 
     finally:
