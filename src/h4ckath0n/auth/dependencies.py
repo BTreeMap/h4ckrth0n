@@ -57,8 +57,7 @@ async def _get_current_user(
     db: AsyncSession = await _get_async_db_from_request(request)
     try:
         result = await db.execute(select(User).filter(User.id == ctx.user_id))
-        user = result.scalars().first()
-        if user is None:
+        if (user := result.scalars().first()) is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
         return user
     finally:

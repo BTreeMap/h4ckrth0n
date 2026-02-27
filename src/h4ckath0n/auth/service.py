@@ -55,8 +55,7 @@ async def register_user(
 ) -> User:
     hash_password, _verify = _require_password_extra()
     result = await db.execute(select(User).filter(User.email == email))
-    existing = result.scalars().first()
-    if existing:
+    if result.scalars().first():
         raise ValueError("Email already registered")
     role = "admin" if await _is_bootstrap_admin(email, settings, db) else "user"
     user = User(
@@ -73,8 +72,7 @@ async def register_user(
 async def authenticate_user(db: AsyncSession, email: str, password: str) -> User | None:
     _hash, verify_password = _require_password_extra()
     result = await db.execute(select(User).filter(User.email == email))
-    user = result.scalars().first()
-    if user is None:
+    if (user := result.scalars().first()) is None:
         return None
     if not user.password_hash:
         return None
@@ -93,8 +91,7 @@ def _jwk_fingerprint(jwk: dict) -> str:
     Raises :class:`ValueError` when required fields are missing.
     """
     required = ("crv", "kty", "x", "y")
-    missing = [k for k in required if k not in jwk]
-    if missing:
+    if missing := [k for k in required if k not in jwk]:
         raise ValueError(f"JWK missing required fields: {', '.join(missing)}")
     canonical = {k: jwk[k] for k in required}
     raw = json.dumps(canonical, separators=(",", ":"), sort_keys=True)
@@ -118,8 +115,7 @@ async def register_device(
     fp = _jwk_fingerprint(public_key_jwk)
 
     result = await db.execute(select(Device).filter(Device.fingerprint == fp))
-    existing = result.scalars().first()
-    if existing:
+    if existing := result.scalars().first():
         return existing.id
 
     device = Device(
@@ -141,8 +137,7 @@ async def create_password_reset_token(
 ) -> str | None:
     """Create a password reset token. Returns raw token or None if email unknown."""
     result = await db.execute(select(User).filter(User.email == email))
-    user = result.scalars().first()
-    if user is None:
+    if (user := result.scalars().first()) is None:
         return None
     raw = secrets.token_urlsafe(48)
     prt = PasswordResetToken(
@@ -165,15 +160,13 @@ async def confirm_password_reset(db: AsyncSession, raw_token: str, new_password:
             PasswordResetToken.used.is_(False),
         )
     )
-    prt = prt_result.scalars().first()
-    if prt is None:
+    if (prt := prt_result.scalars().first()) is None:
         raise ValueError("Invalid or already-used reset token")
     if prt.expires_at.replace(tzinfo=UTC) < datetime.now(UTC):
         raise ValueError("Reset token expired")
     prt.used = True
     user_result = await db.execute(select(User).filter(User.id == prt.user_id))
-    user = user_result.scalars().first()
-    if user is None:
+    if (user := user_result.scalars().first()) is None:
         raise ValueError("User not found")
     user.password_hash = hash_password(new_password)
     await db.commit()

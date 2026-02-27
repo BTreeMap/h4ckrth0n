@@ -84,8 +84,7 @@ def _password_router() -> APIRouter:
     async def login(
         body: schemas.LoginRequest, request: Request, db: AsyncSession = Depends(_db_dep)
     ):
-        user = await authenticate_user(db, body.email, body.password)
-        if user is None:
+        if (user := await authenticate_user(db, body.email, body.password)) is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
             )

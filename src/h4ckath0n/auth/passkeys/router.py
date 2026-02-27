@@ -314,8 +314,7 @@ async def passkey_rename(
     try:
         cred = await rename_passkey(db, user, key_id, body.name)
     except ValueError as exc:
-        msg = str(exc)
-        if "revoked" in msg.lower():
+        if "revoked" in (msg := str(exc)).lower():
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=msg) from None
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg) from None
     return schemas.PasskeyRenameResponse(id=cred.id, name=cred.name)
