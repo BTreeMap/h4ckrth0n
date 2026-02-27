@@ -42,8 +42,7 @@ def _new_challenge() -> bytes:
 async def _get_valid_flow(db: AsyncSession, flow_id: str, kind: str) -> WebAuthnChallenge:
     """Fetch and validate an unconsumed, non-expired flow."""
     result = await db.execute(select(WebAuthnChallenge).filter(WebAuthnChallenge.id == flow_id))
-    flow = result.scalars().first()
-    if flow is None:
+    if (flow := result.scalars().first()) is None:
         raise ValueError("Unknown flow")
     if flow.kind != kind:
         raise ValueError("Flow kind mismatch")
@@ -138,8 +137,7 @@ async def finish_registration(
     await db.commit()
 
     result = await db.execute(select(User).filter(User.id == flow.user_id))
-    user = result.scalars().first()
-    if user is None:
+    if (user := result.scalars().first()) is None:
         raise ValueError("User not found")
     return user
 
@@ -195,8 +193,7 @@ async def finish_authentication(
             WebAuthnCredential.revoked_at.is_(None),
         )
     )
-    stored = result.scalars().first()
-    if stored is None:
+    if (stored := result.scalars().first()) is None:
         raise ValueError("Unknown or revoked credential")
 
     challenge_bytes = base64url_to_bytes(flow.challenge)
@@ -216,8 +213,7 @@ async def finish_authentication(
     await db.commit()
 
     user_result = await db.execute(select(User).filter(User.id == stored.user_id))
-    user = user_result.scalars().first()
-    if user is None:
+    if (user := user_result.scalars().first()) is None:
         raise ValueError("User not found")
     return user
 
@@ -343,8 +339,7 @@ async def rename_passkey(
             WebAuthnCredential.user_id == user.id,
         )
     )
-    cred = result.scalars().first()
-    if cred is None:
+    if (cred := result.scalars().first()) is None:
         raise ValueError("Credential not found")
     if cred.revoked_at is not None:
         raise ValueError("Cannot rename a revoked passkey")
@@ -381,8 +376,7 @@ async def revoke_passkey(db: AsyncSession, user: User, key_id: str) -> None:
                 WebAuthnCredential.user_id == user.id,
             )
         )
-        cred = result.scalars().first()
-        if cred is None:
+        if (cred := result.scalars().first()) is None:
             raise ValueError("Credential not found")
         if cred.revoked_at is not None:
             raise ValueError("Credential already revoked")

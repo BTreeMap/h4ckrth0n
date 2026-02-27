@@ -307,8 +307,7 @@ def _cmd_users_show(args: argparse.Namespace) -> int:
         from sqlalchemy.orm import Session
 
         with Session(engine) as session:
-            user = _resolve_user(session, args)
-            if user is None:
+            if (user := _resolve_user(session, args)) is None:
                 if not (getattr(args, "user_id", None) or getattr(args, "email", None)):
                     return EXIT_BAD_ARGS
                 _err("user not found")
@@ -574,8 +573,7 @@ def _cmd_devices_revoke(args: argparse.Namespace) -> int:
 
         with Session(engine) as session:
             stmt = select(Device).where(Device.id == args.device_id)
-            device = session.execute(stmt).scalars().first()
-            if device is None:
+            if (device := session.execute(stmt).scalars().first()) is None:
                 _err("device not found")
                 return EXIT_NOT_FOUND
 
@@ -605,8 +603,7 @@ def _cmd_passkeys_list(args: argparse.Namespace) -> int:
         from sqlalchemy.orm import Session
 
         with Session(engine) as session:
-            user = _resolve_user(session, args)
-            if user is None:
+            if (user := _resolve_user(session, args)) is None:
                 if not (getattr(args, "user_id", None) or getattr(args, "email", None)):
                     return EXIT_BAD_ARGS
                 _err("user not found")
@@ -637,8 +634,7 @@ def _cmd_passkeys_revoke(args: argparse.Namespace) -> int:
 
         with Session(engine) as session:
             stmt = select(WebAuthnCredential).where(WebAuthnCredential.id == args.key_id)
-            cred = session.execute(stmt).scalars().first()
-            if cred is None:
+            if (cred := session.execute(stmt).scalars().first()) is None:
                 _err("passkey not found")
                 return EXIT_NOT_FOUND
 
