@@ -61,6 +61,11 @@ uv run uvicorn your_module:app --reload
 - Protected routes require an `Authorization: Bearer <device_jwt>` header that the web
   template can mint after login.
 
+## Built-in routes
+
+- `GET /` — welcome message confirming the app is reachable.
+- `GET /health` — returns `{"status": "healthy"}` for load balancer and deployment checks.
+
 ## Auth model
 
 ### Passkeys by default
@@ -70,7 +75,7 @@ The default authentication path uses passkeys (WebAuthn). The core flows are:
 1. `POST /auth/passkey/register/start` and `POST /auth/passkey/register/finish`
 2. `POST /auth/passkey/login/start` and `POST /auth/passkey/login/finish`
 3. `POST /auth/passkey/add/start` and `POST /auth/passkey/add/finish` for adding devices
-4. `GET /auth/passkeys` and `POST /auth/passkeys/{key_id}/revoke` for management
+4. `GET /auth/passkeys`, `POST /auth/passkeys/{key_id}/revoke`, and `PATCH /auth/passkeys/{key_id}` for management
 
 ### Device signed JWTs
 
