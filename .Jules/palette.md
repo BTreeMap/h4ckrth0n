@@ -1,0 +1,3 @@
+## 2024-05-14 - Password Visibility Toggle
+**Learning:** Adding a password visibility toggle (show/hide) inside the input field significantly improves the user experience by reducing login/registration friction and typos. It is crucial to manage the ARIA labels dynamically ("Show password" vs. "Hide password") and ensure the toggle button itself is keyboard accessible and does not interfere with the form submission (e.g., explicitly setting `type="button"` on the toggle). Adding `aria-hidden="true"` to the icons ensures screen readers only read the button's `aria-label`.
+**Action:** Always include a visibility toggle with proper ARIA attributes for `type="password"` inputs in the design system to ensure accessibility and usability.
