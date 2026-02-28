@@ -28,7 +28,7 @@ def get_app_routes() -> list[tuple[str, str]]:
     from h4ckath0n.config import Settings  # noqa: E402
 
     settings = Settings(
-        database_url="sqlite+aiosqlite:///",
+        database_url="sqlite+aiosqlite://",
         password_auth_enabled=True,
     )
     app = create_app(settings)
@@ -62,7 +62,7 @@ def check_routes_in_readme(
     for method, path in routes:
         # Build a pattern like "GET /health" or "PATCH /auth/passkeys/\{key_id\}"
         # that must appear as a recognisable method+path token in the README.
-        path_re = re.escape(path).replace(r"\{", r"\{?").replace(r"\}", r"\}?")
+        path_re = re.escape(path)
         combined = rf"`{method}\s+{path_re}`"
         if not re.search(combined, readme_text, re.IGNORECASE):
             missing.append((method, path))
