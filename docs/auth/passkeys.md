@@ -15,6 +15,7 @@ Passkey routes are mounted automatically by `create_app()`:
 - `POST /auth/passkey/add/finish` (requires device JWT)
 - `GET /auth/passkeys` (requires device JWT)
 - `POST /auth/passkeys/{key_id}/revoke` (requires device JWT)
+- `PATCH /auth/passkeys/{key_id}` (requires device JWT) — rename a passkey
 
 ## Registration flow
 
