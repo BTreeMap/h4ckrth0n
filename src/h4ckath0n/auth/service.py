@@ -11,7 +11,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from h4ckath0n.auth.models import Device, PasswordResetToken, User
@@ -41,9 +41,9 @@ async def _is_bootstrap_admin(email: str, settings: Settings, db: AsyncSession) 
     if email in settings.bootstrap_admin_emails:
         return True
     if settings.first_user_is_admin:
-        result = await db.execute(select(func.count()).select_from(User))
-        count = result.scalar()
-        if count == 0:
+        # Check for table emptiness using a fast scalar query, avoiding expensive O(N) count
+        user_id = await db.scalar(select(User.id).limit(1))
+        if user_id is None:
             return True
     return False
 
@@ -57,8 +57,9 @@ async def register_user(
     display_name: str | None = None,
 ) -> User:
     hash_password, _verify = _require_password_extra()
-    result = await db.execute(select(User).filter(User.email == email))
-    if result.scalars().first():
+    # Fetch only ID to avoid expensive ORM parsing/hydration for an existence check
+    existing_id = await db.scalar(select(User.id).filter(User.email == email))
+    if existing_id is not None:
         raise ValueError("Email already registered")
     role = "admin" if await _is_bootstrap_admin(email, settings, db) else "user"
     user = User(
