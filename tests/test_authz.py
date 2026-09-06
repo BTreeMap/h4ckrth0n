@@ -8,8 +8,10 @@ from h4ckath0n.auth.authz import (
     ADMIN,
     USER,
     Scope,
+    add_scopes,
     missing_scopes,
     parse_scopes,
+    remove_scopes,
     serialize_scopes,
 )
 from h4ckath0n.auth.passkeys.errors import (
@@ -42,6 +44,14 @@ class TestScopes:
     def test_serialize_roundtrips(self):
         raw = "admin,demo,reports"
         assert serialize_scopes(parse_scopes(raw)) == raw
+
+    def test_add_scopes(self):
+        assert add_scopes("admin,demo", "reports") == "admin,demo,reports"
+        assert add_scopes("admin", "admin,demo") == "admin,demo"
+
+    def test_remove_scopes(self):
+        assert remove_scopes("admin,demo,reports", "demo,admin") == "reports"
+        assert remove_scopes("admin,demo", "reports") == "admin,demo"
 
     def test_serialize_deduplicates(self):
         assert serialize_scopes([Scope("a"), Scope("a"), Scope("b")]) == "a,b"
