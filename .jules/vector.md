@@ -1,0 +1,3 @@
+## 2024-08-14 - Centralized pure functional transformations over local multi-step mutations
+**Learning:** Inhaling and manually processing scopes (parsing, filtering via comprehensions, re-serializing) inline within command handlers or domain logic obscures the actual transformation intent and duplicates edge-case handling logic across the repo.
+**Action:** Instead, centralize functional data-structure transformations like `add_scopes` and `remove_scopes` directly in the `authz` module. They should accept flexible inputs (`str | Iterable[str]`), use existing parsers, perform the logical transformation, and return the clear domain object array (`list[Scope]`). Callers then only handle one clean pipeline stage before persistence.
