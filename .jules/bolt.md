@@ -28,3 +28,9 @@
 **Learning:** When retrieving objects by primary key, using `db.execute(select(Model).filter(Model.id == pk)).scalars().first()` bypasses the SQLAlchemy identity map and always triggers a database query, in addition to carrying the overhead of parsing and hydration. Since this is often used in high-frequency hot paths (like device JWT authentication), it becomes a measurable performance bottleneck.
 
 **Action:** Always use `await db.get(Model, pk)` when looking up a single record by its primary key. This checks the current session's identity map first, avoiding a roundtrip to the database and bypassing parsing overhead if the object is already loaded.
+
+## 2026-03-24 - Optimizing Emptiness and Existence Checks
+
+**Learning:** When checking if a table is empty, `select(func.count())` forces the database to perform a sequential scan to count all rows (O(N) operation). In contrast, fetching a single ID with a limit (`select(Model.id).limit(1)`) is an O(1) operation that returns immediately after finding the first row. Furthermore, for general existence checks (like verifying if an email exists), selecting the full model `select(Model)` incurs unnecessary overhead because SQLAlchemy must parse all columns and hydrate full ORM objects in memory.
+
+**Action:** Always prefer `select(Model.id).limit(1)` over `select(func.count())` when simply checking if a table has any rows. For specific existence checks, prefer targeted ID queries `select(Model.id)` over full ORM queries `select(Model)` to avoid costly memory allocation and parsing overhead.
