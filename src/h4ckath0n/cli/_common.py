@@ -14,7 +14,6 @@ from typing import Any
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
-from h4ckath0n.auth.authz import parse_scopes, serialize_scopes
 from h4ckath0n.auth.models import User
 from h4ckath0n.db.migrations.runtime import (
     create_sync_engine,
@@ -127,11 +126,6 @@ def _sync_session(args: argparse.Namespace) -> Iterator[Session]:
             yield session
     finally:
         engine.dispose()
-
-
-def _normalize_scopes(raw: str) -> str:
-    """Normalize a comma-separated scopes string."""
-    return serialize_scopes(parse_scopes(raw))
 
 
 def _selection_provided(args: argparse.Namespace) -> bool:

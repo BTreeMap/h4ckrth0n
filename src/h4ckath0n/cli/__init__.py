@@ -19,7 +19,6 @@ from h4ckath0n.cli._common import (
     EXIT_OK,
     EXIT_PROD_INIT,
     _normalize_db_url_for_sync,
-    _normalize_scopes,
 )
 from h4ckath0n.cli._parser import build_parser
 from h4ckath0n.cli.db import (
@@ -56,7 +55,6 @@ __all__ = [
     "build_parser",
     "alembic_command",
     "_normalize_db_url_for_sync",
-    "_normalize_scopes",
 ]
 
 # Preserve historical parser alias.
