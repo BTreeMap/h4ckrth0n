@@ -1,17 +1,17 @@
 #!/usr/bin/env -S uv run python
-"""Drift-prevention check: verify that every API route in the FastAPI app is documented.
+"""Drift-prevention check: verify that the API routes table in README.md matches the OpenAPI schema.
 
 Usage (from repo root):
-    uv run scripts/check_doc_routes.py
+    uv run scripts/check_doc_routes.py [--fix]
 
-The script imports the h4ckath0n app, enumerates all routes, and checks that
-README.md mentions each one. Routes provided by FastAPI itself (e.g. /openapi.json,
-/docs, /redoc) are excluded from the check.
+The script imports the h4ckath0n app, generates the route table from the OpenAPI schema,
+and ensures that the section between <!-- BEGIN API ROUTES --> and <!-- END API ROUTES -->
+is exactly up to date.
 """
 
 from __future__ import annotations
 
-import re
+import argparse
 import sys
 from pathlib import Path
 
@@ -24,8 +24,7 @@ FRAMEWORK_PATHS = frozenset(
 )
 
 
-def get_app_routes() -> list[tuple[str, str]]:
-    """Return (method, path) pairs from the live FastAPI app."""
+def generate_routes_markdown() -> str:
     from h4ckath0n.app import create_app  # noqa: E402
     from h4ckath0n.config import Settings  # noqa: E402
 
@@ -34,58 +33,86 @@ def get_app_routes() -> list[tuple[str, str]]:
         password_auth_enabled=True,
     )
     app = create_app(settings)
+    openapi = app.openapi()
+    paths = openapi.get("paths", {})
 
-    routes: list[tuple[str, str]] = []
-    for route in app.routes:
-        # Skip non-HTTP routes.
-        if not hasattr(route, "methods") or not hasattr(route, "path"):
-            continue
-        path: str = route.path  # type: ignore[union-attr]
+    routes_by_tag: dict[str, list[tuple[str, str, str]]] = {}
+
+    for path, path_item in paths.items():
         if path in FRAMEWORK_PATHS:
             continue
-        for method in sorted(route.methods):  # type: ignore[union-attr]
-            if method == "HEAD":
-                continue
-            routes.append((method, path))
-    return sorted(routes)
+        for method, op in path_item.items():
+            method_upper = method.upper()
+            summary = op.get("summary", "")
+            tags = op.get("tags", ["default"])
+            tag = tags[0] if tags else "default"
+            routes_by_tag.setdefault(tag, []).append((method_upper, path, summary))
 
+    lines = []
 
-def check_routes_in_readme(
-    routes: list[tuple[str, str]],
-) -> list[tuple[str, str]]:
-    """Return routes that are not mentioned anywhere in README.md.
+    ordered_tags = sorted(routes_by_tag.keys())
+    if "default" in ordered_tags:
+        ordered_tags.remove("default")
+        ordered_tags.insert(0, "default")
 
-    We look for ``METHOD /path`` (e.g. ``GET /health``) so that sub-path
-    matches like ``/auth/passkeys/{key_id}`` inside
-    ``/auth/passkeys/{key_id}/revoke`` are not false positives.
-    """
-    readme_text = README.read_text()
-    missing: list[tuple[str, str]] = []
-    for method, path in routes:
-        # Match exact method/path tokens in README.
-        path_re = re.escape(path)
-        combined = rf"`{method}\s+{path_re}`"
-        if not re.search(combined, readme_text, re.IGNORECASE):
-            missing.append((method, path))
-    return missing
+    for tag in ordered_tags:
+        # Title case except for specific known tags like 'llm'
+        tag_title = "LLM" if tag == "llm" else tag.replace("-", " ").title()
+        if tag == "default":
+            tag_title = "General"
+
+        lines.append(f"### {tag_title}")
+        lines.append("")
+        for method, path, summary in sorted(
+            routes_by_tag[tag], key=lambda x: (x[1], x[0])
+        ):
+            lines.append(f"- `{method} {path}` — {summary.lower()}.")
+        lines.append("")
+
+    return "\n".join(lines).strip() + "\n"
 
 
 def main() -> int:
-    routes = get_app_routes()
-    missing = check_routes_in_readme(routes)
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--fix", action="store_true", help="Update the README automatically"
+    )
+    args = parser.parse_args()
 
-    if missing:
-        print("❌ The following API routes are NOT documented in README.md:\n")
-        for method, path in missing:
-            print(f"  {method:6s} {path}")
+    generated_md = generate_routes_markdown()
+    readme_text = README.read_text(encoding="utf-8")
+
+    start_marker = "<!-- BEGIN API ROUTES -->\n"
+    end_marker = "<!-- END API ROUTES -->"
+
+    start_idx = readme_text.find(start_marker)
+    end_idx = readme_text.find(end_marker)
+
+    if start_idx == -1 or end_idx == -1 or start_idx >= end_idx:
         print(
-            "\nAdd these routes to README.md or, if intentionally undocumented, "
-            "add them to FRAMEWORK_PATHS in this script."
+            "❌ Could not find valid <!-- BEGIN API ROUTES --> and "
+            "<!-- END API ROUTES --> markers in README.md."
         )
         return 1
 
-    print(f"✅ All {len(routes)} API routes are documented in README.md.")
-    return 0
+    pre = readme_text[: start_idx + len(start_marker)]
+    post = readme_text[end_idx:]
+
+    current_section = readme_text[start_idx + len(start_marker) : end_idx]
+
+    if current_section == generated_md:
+        print("✅ API routes in README.md are up to date.")
+        return 0
+
+    if args.fix:
+        new_readme = pre + generated_md + post
+        README.write_text(new_readme, encoding="utf-8")
+        print("🔧 Fixed API routes in README.md.")
+        return 0
+    else:
+        print("❌ API routes in README.md are out of date.")
+        print("Run `uv run scripts/check_doc_routes.py --fix` to update it.")
+        return 1
 
 
 if __name__ == "__main__":
