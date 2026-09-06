@@ -15,7 +15,19 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
 
     return (
       <div className="space-y-2">
-        {label && <Label htmlFor={inputId}>{label}</Label>}
+        {(label || (props.maxLength && typeof props.value === "string")) && (
+          <div className="flex items-center justify-between">
+            {label && <Label htmlFor={inputId}>{label}</Label>}
+            {props.maxLength && typeof props.value === "string" && (
+              <span
+                className="text-xs text-text-muted"
+                aria-live="polite"
+              >
+                {props.value.length} / {props.maxLength}
+              </span>
+            )}
+          </div>
+        )}
         <input
           id={inputId}
           type={type}
