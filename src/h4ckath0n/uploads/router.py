@@ -62,7 +62,12 @@ async def upload_file(
     db: AsyncSession = Depends(_db_dep),
 ) -> UploadResponse:
     settings = request.app.state.settings
-    data = await file.read()
+    if file.size is not None and file.size > settings.max_upload_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File too large. Maximum size: {settings.max_upload_bytes} bytes",
+        )
+    data = await file.read(settings.max_upload_bytes + 1)
     if len(data) > settings.max_upload_bytes:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
