@@ -63,26 +63,35 @@ uv run uvicorn your_module:app --reload
 
 ## Built-in routes
 
-- `GET /` — welcome message confirming the app is reachable.
-- `GET /health` — returns `{"status": "healthy"}` for load balancer and deployment checks.
+<!-- BEGIN ROUTES -->
 
-### Session
-- `GET /auth/session` — returns the current user session details.
+- `POST /auth/passkey/register/start` — Start passkey registration
+- `POST /auth/passkey/register/finish` — Finish passkey registration
+- `POST /auth/passkey/login/start` — Start passkey login
+- `POST /auth/passkey/login/finish` — Finish passkey login
+- `POST /auth/passkey/add/start` — Start adding a passkey
+- `POST /auth/passkey/add/finish` — Finish adding a passkey
+- `GET /auth/passkeys` — List passkeys
+- `POST /auth/passkeys/{key_id}/revoke` — Revoke a passkey
+- `PATCH /auth/passkeys/{key_id}` — Rename a passkey
+- `GET /auth/session` — Current session
+- `GET /jobs` — List jobs
+- `POST /jobs` — Enqueue a job
+- `GET /jobs/{job_id}` — Get job
+- `GET /uploads` — List uploads
+- `POST /uploads` — Upload a file
+- `GET /uploads/{upload_id}` — Get upload metadata
+- `GET /uploads/{upload_id}/download` — Download a file
+- `POST /llm/chat` — Chat completion
+- `POST /llm/chat/stream` — Streaming chat completion
+- `POST /auth/register` — Register with password
+- `POST /auth/login` — Login with password
+- `POST /auth/password-reset/request` — Request a password reset
+- `POST /auth/password-reset/confirm` — Confirm password reset
+- `GET /` — Welcome
+- `GET /health` — Health
 
-### Background Jobs
-- `GET /jobs` — list jobs.
-- `POST /jobs` — enqueue a background job.
-- `GET /jobs/{job_id}` — get the status and result of a job.
-
-### Uploads
-- `GET /uploads` — list uploaded files.
-- `POST /uploads` — upload a new file.
-- `GET /uploads/{upload_id}` — get metadata for a specific upload.
-- `GET /uploads/{upload_id}/download` — download the uploaded file.
-
-### LLM Chat
-- `POST /llm/chat` — send a message to the language model.
-- `POST /llm/chat/stream` — stream responses from the language model.
+<!-- END ROUTES -->
 
 ## Auth model
 
