@@ -57,8 +57,8 @@ async def register_user(
     display_name: str | None = None,
 ) -> User:
     hash_password, _verify = _require_password_extra()
-    result = await db.execute(select(User).filter(User.email == email))
-    if result.scalars().first():
+    # ⚡ Bolt: Fetch only the ID to avoid instantiating the full User ORM object.
+    if await db.scalar(select(User.id).filter(User.email == email)):
         raise ValueError("Email already registered")
     role = "admin" if await _is_bootstrap_admin(email, settings, db) else "user"
     user = User(
