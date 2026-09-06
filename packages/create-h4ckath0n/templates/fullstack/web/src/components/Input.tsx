@@ -5,17 +5,27 @@ import { Label } from "./Label";
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
+  showCount?: boolean;
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, label, error, id, ...props }, ref) => {
+  ({ className, type, label, error, showCount, id, ...props }, ref) => {
     const generatedId = useId();
     const inputId = id || generatedId;
     const errorId = `${inputId}-error`;
 
     return (
       <div className="space-y-2">
-        {label && <Label htmlFor={inputId}>{label}</Label>}
+        {(label || (showCount && props.maxLength)) && (
+          <div className="flex justify-between items-baseline">
+            {label ? <Label htmlFor={inputId}>{label}</Label> : <div />}
+            {showCount && props.maxLength && (
+              <span className="text-xs text-text-muted">
+                {String(props.value ?? "").length}/{props.maxLength}
+              </span>
+            )}
+          </div>
+        )}
         <input
           id={inputId}
           type={type}

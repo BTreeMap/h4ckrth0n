@@ -1,0 +1,1 @@
+## 2024-08-14 - Character Count Indicator for Display Name\n **Learning:** Add a character count indicator for input fields with a strict max length like Display Name. This provides immediate feedback and prevents users from encountering errors upon submission.\n **Action:** Added a simple text indicator (e.g., `10/200`) below the input field for character count.

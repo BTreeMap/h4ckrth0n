@@ -92,6 +92,7 @@ export function Register() {
               data-testid="register-display-name"
               autoComplete="name"
               maxLength={DISPLAY_NAME_MAX_LENGTH}
+              showCount
               autoFocus
             />
 

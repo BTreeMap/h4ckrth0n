@@ -97,6 +97,7 @@ function PasskeyName({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             maxLength={MAX_NAME_LENGTH}
+            showCount
             className="h-8 w-48"
             autoFocus
             onKeyDown={(e) => {
