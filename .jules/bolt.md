@@ -28,3 +28,7 @@
 **Learning:** When retrieving objects by primary key, using `db.execute(select(Model).filter(Model.id == pk)).scalars().first()` bypasses the SQLAlchemy identity map and always triggers a database query, in addition to carrying the overhead of parsing and hydration. Since this is often used in high-frequency hot paths (like device JWT authentication), it becomes a measurable performance bottleneck.
 
 **Action:** Always use `await db.get(Model, pk)` when looking up a single record by its primary key. This checks the current session's identity map first, avoiding a roundtrip to the database and bypassing parsing overhead if the object is already loaded.
+
+## 2026-03-20 - Replace O(N) Table Count with O(1) limit(1)
+**Learning:** Checking if a database table is empty or has matching rows using `select(func.count())` forces the database to scan all matching rows (O(N) operation).
+**Action:** When checking for existence, always use `await db.scalar(select(Model.id).limit(1))` and check if the result is `None`. This turns it into an O(1) operation.
