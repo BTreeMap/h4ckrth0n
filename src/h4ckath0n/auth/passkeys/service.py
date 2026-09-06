@@ -6,7 +6,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from h4ckath0n.auth.models import (
@@ -380,15 +380,15 @@ async def revoke_passkey(db: AsyncSession, user: User, key_id: str) -> None:
             raise PasskeyAlreadyRevokedError
 
         # Count active passkeys; the user-row lock serializes mutations.
-        active_count = await db.scalar(
-            select(func.count())
-            .select_from(WebAuthnCredential)
+        active_creds = await db.scalars(
+            select(WebAuthnCredential.id)
             .filter(
                 WebAuthnCredential.user_id == user.id,
                 WebAuthnCredential.revoked_at.is_(None),
             )
+            .limit(2)
         )
-        if active_count is not None and int(active_count) <= 1:
+        if len(active_creds.all()) <= 1:
             raise LastPasskeyError
 
         cred.revoked_at = datetime.now(UTC)
