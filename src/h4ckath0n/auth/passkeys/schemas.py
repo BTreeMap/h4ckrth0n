@@ -5,26 +5,19 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from h4ckath0n.auth.schemas import (
-    DISPLAY_NAME_MAX_LENGTH,
     DeviceBindingMixin,
-    normalize_display_name,
+    DisplayNameStr,
 )
 
 
 class PasskeyRegisterStartRequest(BaseModel):
-    display_name: str = Field(
+    display_name: DisplayNameStr = Field(
         ...,
         description="Human-facing display name for the new account.",
-        max_length=DISPLAY_NAME_MAX_LENGTH,
     )
-
-    @field_validator("display_name")
-    @classmethod
-    def _clean_display_name(cls, v: str) -> str:
-        return normalize_display_name(v)
 
 
 class PasskeyRegisterStartResponse(BaseModel):
