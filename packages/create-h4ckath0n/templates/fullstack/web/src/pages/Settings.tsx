@@ -149,7 +149,7 @@ function PasskeyName({
           variant="ghost"
           data-testid="passkey-edit-btn"
           onClick={startEdit}
-          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="h-6 w-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
           aria-label="Edit passkey name"
         >
           <Pencil className="w-3 h-3" />
@@ -290,7 +290,7 @@ export function Settings() {
               <label
                 key={option}
                 className={cn(
-                  "cursor-pointer rounded-xl border-2 p-4 hover:bg-surface-alt transition-all",
+                  "cursor-pointer rounded-xl border-2 p-4 hover:bg-surface-alt transition-all has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary has-[:focus-visible]:ring-offset-2",
                   themePreference === option
                     ? "border-primary bg-primary/5"
                     : "border-border",
