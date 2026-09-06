@@ -7,7 +7,12 @@ from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 
-from h4ckath0n.auth.authz import parse_scopes, serialize_scopes
+from h4ckath0n.auth.authz import (
+    add_scopes,
+    parse_scopes,
+    remove_scopes,
+    serialize_scopes,
+)
 from h4ckath0n.auth.models import Device, User, WebAuthnCredential
 from h4ckath0n.cli._common import (
     EXIT_BAD_ARGS,
@@ -143,7 +148,7 @@ def _cmd_users_scopes_add(args: argparse.Namespace) -> int:
         assert user is not None
 
         existing = parse_scopes(user.scopes)
-        user.scopes = serialize_scopes((*existing, *parse_scopes(args.scope)))
+        user.scopes = serialize_scopes(add_scopes(existing, parse_scopes(args.scope)))
         session.commit()
         session.refresh(user)
         _output(_user_dict(user), fmt=args.format, pretty=args.pretty)
@@ -161,9 +166,9 @@ def _cmd_users_scopes_remove(args: argparse.Namespace) -> int:
         assert user is not None
 
         existing = parse_scopes(user.scopes)
-        to_remove = set(parse_scopes(args.scope))
-        remaining = [s for s in existing if s not in to_remove]
-        user.scopes = serialize_scopes(remaining)
+        user.scopes = serialize_scopes(
+            remove_scopes(existing, parse_scopes(args.scope))
+        )
         session.commit()
         session.refresh(user)
         _output(_user_dict(user), fmt=args.format, pretty=args.pretty)

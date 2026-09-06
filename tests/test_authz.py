@@ -8,8 +8,10 @@ from h4ckath0n.auth.authz import (
     ADMIN,
     USER,
     Scope,
+    add_scopes,
     missing_scopes,
     parse_scopes,
+    remove_scopes,
     serialize_scopes,
 )
 from h4ckath0n.auth.passkeys.errors import (
@@ -55,6 +57,21 @@ class TestScopes:
         granted = parse_scopes("admin,demo,reports")
         required = parse_scopes("admin,demo")
         assert missing_scopes(granted, required) == set()
+
+    def test_add_scopes(self):
+        current = parse_scopes("a,b")
+        to_add = parse_scopes("b,c,a,d")
+        assert add_scopes(current, to_add) == [
+            Scope("a"),
+            Scope("b"),
+            Scope("c"),
+            Scope("d"),
+        ]
+
+    def test_remove_scopes(self):
+        current = parse_scopes("a,b,c,d,a")
+        to_remove = parse_scopes("b,d,e")
+        assert remove_scopes(current, to_remove) == [Scope("a"), Scope("c")]
 
     def test_role_constants(self):
         assert USER == "user"
