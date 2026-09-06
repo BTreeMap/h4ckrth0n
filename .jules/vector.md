@@ -1,0 +1,3 @@
+## 2024-06-25 - Centralized Pydantic Validation with Annotated
+**Learning:** Pydantic v2's `Annotated` type combined with `AfterValidator` is highly effective for centralizing duplicated string configuration (like `max_length` constraints and `@field_validator` normalization logic) across multiple schemas. This ensures a single source of truth for fields like `display_name` without repeating boilerplate decorators.
+**Action:** Prefer extracting shared field semantics into reusable `Annotated` aliases instead of duplicating `Field()` parameters and validation methods across multiple Pydantic models.
