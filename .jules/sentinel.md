@@ -1,0 +1,4 @@
+## 2025-02-23 - JWT Privilege Escalation via Device Binding
+**Vulnerability:** The device-JWT verification logic in `verify_device_jwt` validated the token's cryptographic signature against the device's public key (identified by `kid`), but failed to ensure the token's subject (`sub` claim) matched the user who owns that device (`device.user_id`). This allowed an attacker to sign a token with their own valid device key but assert the identity of any other user, including admins, leading to total privilege escalation.
+**Learning:** In a device-bound authentication architecture where the device record itself holds the user association, the cryptographic signature only proves possession of the device key. It does not prove authorization to act as the subject. The binding between the device and the requested subject must be explicitly verified.
+**Prevention:** Always assert `claims.sub == device.user_id` during JWT verification in device-bound architectures.

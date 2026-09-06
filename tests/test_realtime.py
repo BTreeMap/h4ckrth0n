@@ -290,3 +290,21 @@ class TestRevokedDevice:
         token = _make_token(uid, did, pem, aud=AUD_HTTP)
         ctx = await verify_device_jwt(token, expected_aud=AUD_HTTP, db=db_session)
         assert ctx.device_id == did
+
+
+class TestDeviceUserBinding:
+    """Device must not be able to sign tokens for other users."""
+
+    async def test_mismatched_subject_rejected(self, db_session: AsyncSession):
+        # Create User A with Device A
+        uid_a, did_a, pem_a = await _seed_user_and_device(db_session)
+
+        # Create User B
+        uid_b = new_user_id()
+        db_session.add(User(id=uid_b, role="user"))
+        await db_session.commit()
+
+        # Device A attempts to assert identity of User B
+        token = _make_token(uid_b, did_a, pem_a, aud=AUD_HTTP)
+        with pytest.raises(AuthError, match="User ID mismatch"):
+            await verify_device_jwt(token, expected_aud=AUD_HTTP, db=db_session)
