@@ -64,6 +64,7 @@ dev = [
 ]
 
 [tool.ruff]
+exclude = [".github/skills/**"]
 target-version = "py311"
 line-length = 88
 # Upstream SKILLs submodule and the .claude/skills symlink pointing at it:
