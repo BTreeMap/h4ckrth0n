@@ -60,6 +60,18 @@ class TestScopes:
         assert USER == "user"
         assert ADMIN == "admin"
 
+    def test_add_scopes(self):
+        from h4ckath0n.auth.authz import add_scopes
+
+        assert add_scopes("admin", "demo") == "admin,demo"
+        assert add_scopes("admin,demo", "reports,demo") == "admin,demo,reports"
+
+    def test_remove_scopes(self):
+        from h4ckath0n.auth.authz import remove_scopes
+
+        assert remove_scopes("admin,demo,reports", "demo,admin") == "reports"
+        assert remove_scopes("admin,demo", "reports") == "admin,demo"
+
 
 class TestPasskeyErrors:
     def test_hierarchy_subclasses_value_error(self):
