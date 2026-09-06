@@ -63,26 +63,47 @@ uv run uvicorn your_module:app --reload
 
 ## Built-in routes
 
-- `GET /` — welcome message confirming the app is reachable.
-- `GET /health` — returns `{"status": "healthy"}` for load balancer and deployment checks.
+<!-- BEGIN API ROUTES -->
+
+- `GET /` — welcome.
+- `GET /health` — health.
 
 ### Session
-- `GET /auth/session` — returns the current user session details.
+- `GET /auth/session` — current session.
 
 ### Background Jobs
 - `GET /jobs` — list jobs.
-- `POST /jobs` — enqueue a background job.
-- `GET /jobs/{job_id}` — get the status and result of a job.
-
-### Uploads
-- `GET /uploads` — list uploaded files.
-- `POST /uploads` — upload a new file.
-- `GET /uploads/{upload_id}` — get metadata for a specific upload.
-- `GET /uploads/{upload_id}/download` — download the uploaded file.
+- `GET /jobs/{job_id}` — get job.
+- `POST /jobs` — enqueue a job.
 
 ### LLM Chat
-- `POST /llm/chat` — send a message to the language model.
-- `POST /llm/chat/stream` — stream responses from the language model.
+- `POST /llm/chat` — chat completion.
+- `POST /llm/chat/stream` — streaming chat completion.
+
+### Passkeys
+- `GET /auth/passkeys` — list passkeys.
+- `PATCH /auth/passkeys/{key_id}` — rename a passkey.
+- `POST /auth/passkey/add/finish` — finish adding a passkey.
+- `POST /auth/passkey/add/start` — start adding a passkey.
+- `POST /auth/passkey/login/finish` — finish passkey login.
+- `POST /auth/passkey/login/start` — start passkey login.
+- `POST /auth/passkey/register/finish` — finish passkey registration.
+- `POST /auth/passkey/register/start` — start passkey registration.
+- `POST /auth/passkeys/{key_id}/revoke` — revoke a passkey.
+
+### Password Auth
+- `POST /auth/login` — login with password.
+- `POST /auth/password-reset/confirm` — confirm password reset.
+- `POST /auth/password-reset/request` — request a password reset.
+- `POST /auth/register` — register with password.
+
+### Uploads
+- `GET /uploads` — list uploads.
+- `GET /uploads/{upload_id}` — get upload metadata.
+- `GET /uploads/{upload_id}/download` — download a file.
+- `POST /uploads` — upload a file.
+
+<!-- END API ROUTES -->
 
 ## Auth model
 
