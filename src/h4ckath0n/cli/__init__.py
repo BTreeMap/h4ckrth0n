@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 
+from h4ckath0n.auth.authz import normalize_scopes as _normalize_scopes
 from h4ckath0n.cli._common import (
     EXIT_BAD_ARGS,
     EXIT_LAST_PASSKEY,
@@ -19,7 +20,6 @@ from h4ckath0n.cli._common import (
     EXIT_OK,
     EXIT_PROD_INIT,
     _normalize_db_url_for_sync,
-    _normalize_scopes,
 )
 from h4ckath0n.cli._parser import build_parser
 from h4ckath0n.cli.db import (
