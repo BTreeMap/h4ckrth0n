@@ -91,7 +91,7 @@ const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
             onClick={handleToggle}
             onPointerDown={handlePointerDown}
             onMouseDown={handlePointerDown}
-            className="absolute right-0 top-0 flex h-10 w-10 items-center justify-center text-text-muted hover:text-text transition-colors disabled:pointer-events-none disabled:opacity-50"
+            className="absolute right-0 top-0 flex h-10 w-10 items-center justify-center text-text-muted hover:text-text transition-colors disabled:pointer-events-none disabled:opacity-50 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             disabled={props.disabled}
           >
             <Icon className="h-4 w-4" aria-hidden="true" />
