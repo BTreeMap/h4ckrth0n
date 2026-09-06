@@ -62,7 +62,16 @@ async def upload_file(
     db: AsyncSession = Depends(_db_dep),
 ) -> UploadResponse:
     settings = request.app.state.settings
-    data = await file.read()
+
+    # 🛡️ Sentinel: Prevent OOM DoS by validating size before and during read
+    if file.size is not None and file.size > settings.max_upload_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File too large. Maximum size: {settings.max_upload_bytes} bytes",
+        )
+
+    # 🛡️ Sentinel: Bound the read to max + 1 to detect over-size streams safely
+    data = await file.read(settings.max_upload_bytes + 1)
     if len(data) > settings.max_upload_bytes:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
