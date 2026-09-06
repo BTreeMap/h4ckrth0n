@@ -2,24 +2,21 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Literal, NewType
 
 from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from h4ckath0n.auth.passkeys.ids import random_base32
-from h4ckath0n.db.base import Base
 
 # Job status moves forward through lifecycle states.
+from h4ckath0n.db.base import Base, utcnow
+
 JobStatus = Literal["queued", "running", "succeeded", "failed"]
 
 # Branded job ID: 32 chars, starts with ``j``.
 JobId = NewType("JobId", str)
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC)
 
 
 def new_job_id() -> JobId:
@@ -45,7 +42,7 @@ class Job(Base):
     max_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
     created_by_user_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
+        DateTime(timezone=True), default=utcnow
     )
     started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -54,5 +51,5 @@ class Job(Base):
         DateTime(timezone=True), nullable=True
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
     )

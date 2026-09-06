@@ -2,17 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import BigInteger, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from h4ckath0n.auth.passkeys.ids import random_base32
-from h4ckath0n.db.base import Base
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC)
+from h4ckath0n.db.base import Base, utcnow
 
 
 def new_upload_id() -> str:
@@ -35,5 +31,5 @@ class Upload(Base):
     storage_key: Mapped[str] = mapped_column(String(512), nullable=False)
     extraction_job_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
+        DateTime(timezone=True), default=utcnow
     )

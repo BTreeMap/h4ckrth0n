@@ -1,0 +1,3 @@
+## 2026-08-20 - Centralizing Validation with Annotated
+**Learning:** When dealing with repeatedly validated fields in Pydantic (e.g., `display_name` in auth models), `Annotated` combined with `AfterValidator` offers a clean, functional way to enforce normalization logic consistently across different models. This avoids duplicating `@field_validator` classmethods.
+**Action:** Use `Annotated` with Pydantic validators (`AfterValidator`, `BeforeValidator`) to extract repeated data normalization/validation rules into standalone, pure utilities rather than duplicating them as `@field_validator` classmethods across models.

@@ -7,7 +7,7 @@ The default auth path is passkeys (WebAuthn).  Password-based fields
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Literal
 
 from sqlalchemy import Boolean, DateTime, Index, LargeBinary, String, Text
@@ -24,14 +24,10 @@ from h4ckath0n.auth.passkeys.ids import (
     new_token_id,
     new_user_id,
 )
-from h4ckath0n.db.base import Base
+from h4ckath0n.db.base import Base, utcnow
 
 # Challenge kind must match its ceremony.
 ChallengeKind = Literal["register", "authenticate", "add_credential"]
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC)
 
 
 class User(Base):
@@ -43,7 +39,7 @@ class User(Base):
     role: Mapped[Role] = mapped_column(String(20), nullable=False, default="user")
     scopes: Mapped[str] = mapped_column(Text, nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
+        DateTime(timezone=True), default=utcnow
     )
     disabled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -73,7 +69,7 @@ class WebAuthnCredential(Base):
     transports: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array
     name: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
+        DateTime(timezone=True), default=utcnow
     )
     last_used_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -91,7 +87,7 @@ class WebAuthnChallenge(Base):
     user_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     kind: Mapped[ChallengeKind] = mapped_column(String(20), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
+        DateTime(timezone=True), default=utcnow
     )
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
@@ -120,7 +116,7 @@ class PasswordResetToken(Base):
     )
     used: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
+        DateTime(timezone=True), default=utcnow
     )
 
 
@@ -139,7 +135,7 @@ class Device(Base):
     )  # SHA-256 hex of canonical JWK
     label: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
+        DateTime(timezone=True), default=utcnow
     )
     revoked_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
