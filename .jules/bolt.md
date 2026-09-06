@@ -28,3 +28,6 @@
 **Learning:** When retrieving objects by primary key, using `db.execute(select(Model).filter(Model.id == pk)).scalars().first()` bypasses the SQLAlchemy identity map and always triggers a database query, in addition to carrying the overhead of parsing and hydration. Since this is often used in high-frequency hot paths (like device JWT authentication), it becomes a measurable performance bottleneck.
 
 **Action:** Always use `await db.get(Model, pk)` when looking up a single record by its primary key. This checks the current session's identity map first, avoiding a roundtrip to the database and bypassing parsing overhead if the object is already loaded.
+## 2024-05-24 - Avoid eager materialization of iterables into sets for CPython set operations
+**Learning:** CPython set methods like `.difference()` can consume generic iterables directly. Eagerly converting the iterable to a set before passing it to `.difference()` (e.g., `set(required).difference(set(granted))` or `set(needed).difference(parse_scopes(user.scopes))`) creates an unnecessary intermediate set, incurring memory allocation and performance overhead.
+**Action:** Pass iterables directly to set operations where possible, e.g., `set(required).difference(granted)` instead of converting `granted` to a set first, or inside `require_scopes` avoiding intermediate sets for iterables.

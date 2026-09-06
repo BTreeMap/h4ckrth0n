@@ -88,7 +88,8 @@ def require_admin() -> Any:
 def require_scopes(*scopes: str) -> Any:
     """Dependency that requires the user to have specific scopes (from DB)."""
 
-    needed = set(parse_scopes(scopes))
+    # ⚡ Bolt: Avoid eager materialization into a set; missing_scopes consumes iterables natively.
+    needed = parse_scopes(scopes)
 
     async def _scoped(user: User = Depends(_get_current_user)) -> User:
         if missing := missing_scopes(parse_scopes(user.scopes), needed):
