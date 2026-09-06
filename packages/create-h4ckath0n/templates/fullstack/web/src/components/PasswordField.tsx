@@ -86,12 +86,13 @@ const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
           />
           <button
             type="button"
+            title={visible ? "Hide password" : "Show password"}
             aria-label={visible ? "Hide password" : "Show password"}
             aria-pressed={visible}
             onClick={handleToggle}
             onPointerDown={handlePointerDown}
             onMouseDown={handlePointerDown}
-            className="absolute right-0 top-0 flex h-10 w-10 items-center justify-center text-text-muted hover:text-text transition-colors disabled:pointer-events-none disabled:opacity-50"
+            className="absolute right-0 top-0 flex h-10 w-10 items-center justify-center rounded-xl text-text-muted hover:text-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50"
             disabled={props.disabled}
           >
             <Icon className="h-4 w-4" aria-hidden="true" />
