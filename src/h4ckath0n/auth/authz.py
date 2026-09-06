@@ -40,3 +40,15 @@ def serialize_scopes(scopes: Iterable[Scope]) -> str:
 def missing_scopes(granted: Iterable[Scope], required: Iterable[Scope]) -> set[Scope]:
     """Return the required scopes that are not present in *granted*."""
     return set(required).difference(granted)
+
+
+def add_scopes(existing: str | Iterable[str], to_add: str | Iterable[str]) -> list[Scope]:
+    """Add scopes to an existing collection, preserving order and removing duplicates."""
+    return parse_scopes((*parse_scopes(existing), *parse_scopes(to_add)))
+
+
+def remove_scopes(existing: str | Iterable[str], to_remove: str | Iterable[str]) -> list[Scope]:
+    """Remove scopes from an existing collection, preserving order."""
+    parsed_existing = parse_scopes(existing)
+    parsed_remove = set(parse_scopes(to_remove))
+    return [s for s in parsed_existing if s not in parsed_remove]
