@@ -1,0 +1,3 @@
+## 2024-05-15 - Missing focus styles on absolute-positioned icon buttons
+**Learning:** Absolute positioned icon-only buttons inside custom input wrappers (like `PasswordField`) often miss explicit `focus-visible` styles. Because Tailwind's preflight removes default browser outlines, these interactive elements become completely invisible to keyboard navigation users, violating basic accessibility (WCAG 2.4.7 Focus Visible). Furthermore, they often miss `title` attributes, denying mouse users visual tooltips that `aria-label` provides to screen readers.
+**Action:** Always verify `focus-visible` utility classes (e.g., `focus-visible:ring-2`) and `title` attributes are explicitly added to custom inner interactive elements, especially icon-only toggles.
