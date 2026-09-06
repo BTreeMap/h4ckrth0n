@@ -66,6 +66,23 @@ uv run uvicorn your_module:app --reload
 - `GET /` — welcome message confirming the app is reachable.
 - `GET /health` — returns `{"status": "healthy"}` for load balancer and deployment checks.
 
+### Passkeys
+- `POST /auth/passkey/register/start` — start passkey registration.
+- `POST /auth/passkey/register/finish` — finish passkey registration.
+- `POST /auth/passkey/login/start` — start passkey login.
+- `POST /auth/passkey/login/finish` — finish passkey login.
+- `POST /auth/passkey/add/start` — start adding a passkey device.
+- `POST /auth/passkey/add/finish` — finish adding a passkey device.
+- `GET /auth/passkeys` — list registered passkeys.
+- `POST /auth/passkeys/{key_id}/revoke` — revoke a passkey.
+- `PATCH /auth/passkeys/{key_id}` — update a passkey label.
+
+### Password auth
+- `POST /auth/register` — register with email and password.
+- `POST /auth/login` — login with email and password.
+- `POST /auth/password-reset/request` — request a password reset.
+- `POST /auth/password-reset/confirm` — confirm a password reset.
+
 ### Session
 - `GET /auth/session` — returns the current user session details.
 
