@@ -63,37 +63,39 @@ uv run uvicorn your_module:app --reload
 
 ## Built-in routes
 
-- `GET /` — welcome message confirming the app is reachable.
-- `GET /health` — returns `{"status": "healthy"}` for load balancer and deployment checks.
-
-### Session
-- `GET /auth/session` — returns the current user session details.
-
-### Background Jobs
-- `GET /jobs` — list jobs.
-- `POST /jobs` — enqueue a background job.
-- `GET /jobs/{job_id}` — get the status and result of a job.
-
-### Uploads
-- `GET /uploads` — list uploaded files.
-- `POST /uploads` — upload a new file.
-- `GET /uploads/{upload_id}` — get metadata for a specific upload.
-- `GET /uploads/{upload_id}/download` — download the uploaded file.
-
-### LLM Chat
-- `POST /llm/chat` — send a message to the language model.
-- `POST /llm/chat/stream` — stream responses from the language model.
+<!-- BEGIN API ROUTES -->
+- `GET /`
+- `GET /auth/passkeys`
+- `GET /auth/session`
+- `GET /health`
+- `GET /jobs`
+- `GET /jobs/{job_id}`
+- `GET /uploads`
+- `GET /uploads/{upload_id}`
+- `GET /uploads/{upload_id}/download`
+- `PATCH /auth/passkeys/{key_id}`
+- `POST /auth/login`
+- `POST /auth/passkey/add/finish`
+- `POST /auth/passkey/add/start`
+- `POST /auth/passkey/login/finish`
+- `POST /auth/passkey/login/start`
+- `POST /auth/passkey/register/finish`
+- `POST /auth/passkey/register/start`
+- `POST /auth/passkeys/{key_id}/revoke`
+- `POST /auth/password-reset/confirm`
+- `POST /auth/password-reset/request`
+- `POST /auth/register`
+- `POST /jobs`
+- `POST /llm/chat`
+- `POST /llm/chat/stream`
+- `POST /uploads`
+<!-- END API ROUTES -->
 
 ## Auth model
 
 ### Passkeys by default
 
-The default authentication path uses passkeys (WebAuthn). The core flows are:
-
-1. `POST /auth/passkey/register/start` and `POST /auth/passkey/register/finish`
-2. `POST /auth/passkey/login/start` and `POST /auth/passkey/login/finish`
-3. `POST /auth/passkey/add/start` and `POST /auth/passkey/add/finish` for adding devices
-4. `GET /auth/passkeys`, `POST /auth/passkeys/{key_id}/revoke`, and `PATCH /auth/passkeys/{key_id}` for management
+The default authentication path uses passkeys (WebAuthn). See the Built-in routes section for endpoints.
 
 ### Device signed JWTs
 
@@ -149,11 +151,6 @@ def refund(user=require_scopes("billing:refund")):
 
 Password routes mount only when the password extra is installed and
 `H4CKATH0N_PASSWORD_AUTH_ENABLED=true`.
-
-- `POST /auth/register`
-- `POST /auth/login`
-- `POST /auth/password-reset/request`
-- `POST /auth/password-reset/confirm`
 
 Password auth is only an identity bootstrap. It binds a device key but does not return
 access tokens, refresh tokens, or cookies.

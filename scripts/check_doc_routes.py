@@ -36,17 +36,12 @@ def get_app_routes() -> list[tuple[str, str]]:
     app = create_app(settings)
 
     routes: list[tuple[str, str]] = []
-    for route in app.routes:
-        # Skip non-HTTP routes.
-        if not hasattr(route, "methods") or not hasattr(route, "path"):
-            continue
-        path: str = route.path  # type: ignore[union-attr]
+    schema = app.openapi()
+    for path, path_item in schema.get("paths", {}).items():
         if path in FRAMEWORK_PATHS:
             continue
-        for method in sorted(route.methods):  # type: ignore[union-attr]
-            if method == "HEAD":
-                continue
-            routes.append((method, path))
+        for method in path_item:
+            routes.append((method.upper(), path))
     return sorted(routes)
 
 
@@ -70,8 +65,37 @@ def check_routes_in_readme(
     return missing
 
 
+def update_readme_routes(routes: list[tuple[str, str]]) -> None:
+    """Update README.md with the generated routes table."""
+    readme_text = README.read_text()
+
+    lines = []
+    for method, path in routes:
+        lines.append(f"- `{method} {path}`")
+
+    replacement = (
+        "\n<!-- BEGIN API ROUTES -->\n"
+        + "\n".join(lines)
+        + "\n<!-- END API ROUTES -->\n"
+    )
+
+    new_text = re.sub(
+        r"\n<!-- BEGIN API ROUTES -->.*?<!-- END API ROUTES -->\n",
+        replacement,
+        readme_text,
+        flags=re.DOTALL,
+    )
+    README.write_text(new_text)
+
+
 def main() -> int:
     routes = get_app_routes()
+
+    if "--fix" in sys.argv:
+        update_readme_routes(routes)
+        print(f"✅ Updated README.md with {len(routes)} API routes.")
+        return 0
+
     missing = check_routes_in_readme(routes)
 
     if missing:
@@ -80,7 +104,7 @@ def main() -> int:
             print(f"  {method:6s} {path}")
         print(
             "\nAdd these routes to README.md or, if intentionally undocumented, "
-            "add them to FRAMEWORK_PATHS in this script."
+            "add them to FRAMEWORK_PATHS in this script. Run with --fix to update automatically."
         )
         return 1
 
