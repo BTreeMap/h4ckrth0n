@@ -11,7 +11,6 @@ README.md mentions each one. Routes provided by FastAPI itself (e.g. /openapi.js
 
 from __future__ import annotations
 
-import re
 import sys
 from pathlib import Path
 
@@ -24,8 +23,8 @@ FRAMEWORK_PATHS = frozenset(
 )
 
 
-def get_app_routes() -> list[tuple[str, str]]:
-    """Return (method, path) pairs from the live FastAPI app."""
+def get_app_routes() -> list[tuple[str, str, str]]:
+    """Return (method, path, summary) tuples from the live FastAPI app via OpenAPI."""
     from h4ckath0n.app import create_app  # noqa: E402
     from h4ckath0n.config import Settings  # noqa: E402
 
@@ -35,57 +34,70 @@ def get_app_routes() -> list[tuple[str, str]]:
     )
     app = create_app(settings)
 
-    routes: list[tuple[str, str]] = []
-    for route in app.routes:
-        # Skip non-HTTP routes.
-        if not hasattr(route, "methods") or not hasattr(route, "path"):
-            continue
-        path: str = route.path  # type: ignore[union-attr]
+    routes: list[tuple[str, str, str]] = []
+    paths = app.openapi().get("paths", {})
+    for path, methods in paths.items():
         if path in FRAMEWORK_PATHS:
             continue
-        for method in sorted(route.methods):  # type: ignore[union-attr]
-            if method == "HEAD":
+        for method, op in methods.items():
+            if method.upper() == "HEAD":
                 continue
-            routes.append((method, path))
+            summary = op.get("summary", "")
+            routes.append((method.upper(), path, summary))
     return sorted(routes)
 
 
-def check_routes_in_readme(
-    routes: list[tuple[str, str]],
-) -> list[tuple[str, str]]:
-    """Return routes that are not mentioned anywhere in README.md.
-
-    We look for ``METHOD /path`` (e.g. ``GET /health``) so that sub-path
-    matches like ``/auth/passkeys/{key_id}`` inside
-    ``/auth/passkeys/{key_id}/revoke`` are not false positives.
-    """
-    readme_text = README.read_text()
-    missing: list[tuple[str, str]] = []
-    for method, path in routes:
-        # Match exact method/path tokens in README.
-        path_re = re.escape(path)
-        combined = rf"`{method}\s+{path_re}`"
-        if not re.search(combined, readme_text, re.IGNORECASE):
-            missing.append((method, path))
-    return missing
+def generate_routes_table(routes: list[tuple[str, str, str]]) -> str:
+    """Generate markdown table for routes."""
+    lines = ["| Method | Path | Summary |", "|---|---|---|"]
+    for method, path, summary in routes:
+        lines.append(f"| `{method}` | `{path}` | {summary} |")
+    return "\n".join(lines) + "\n"
 
 
 def main() -> int:
-    routes = get_app_routes()
-    missing = check_routes_in_readme(routes)
+    import argparse
 
-    if missing:
-        print("❌ The following API routes are NOT documented in README.md:\n")
-        for method, path in missing:
-            print(f"  {method:6s} {path}")
-        print(
-            "\nAdd these routes to README.md or, if intentionally undocumented, "
-            "add them to FRAMEWORK_PATHS in this script."
-        )
+    parser = argparse.ArgumentParser(
+        description="Check or fix API route docs in README."
+    )
+    parser.add_argument(
+        "--fix", action="store_true", help="Fix README.md automatically"
+    )
+    args = parser.parse_args()
+
+    routes = get_app_routes()
+    table = generate_routes_table(routes)
+
+    readme_text = README.read_text()
+
+    marker_start = "<!-- BEGIN API ROUTES -->\n"
+    marker_end = "<!-- END API ROUTES -->\n"
+
+    if marker_start not in readme_text or marker_end not in readme_text:
+        print("❌ Markers not found in README.md. ")
+        print("Please add <!-- BEGIN API ROUTES --> and <!-- END API ROUTES -->.")
         return 1
 
-    print(f"✅ All {len(routes)} API routes are documented in README.md.")
-    return 0
+    before = readme_text.split(marker_start)[0]
+    after = readme_text.split(marker_end)[1]
+
+    new_readme_text = before + marker_start + table + marker_end + after
+
+    if readme_text == new_readme_text:
+        print(
+            f"✅ All {len(routes)} API routes are documented accurately in README.md."
+        )
+        return 0
+
+    if args.fix:
+        README.write_text(new_readme_text)
+        print("✅ Updated README.md with latest API routes.")
+        return 0
+    else:
+        print("❌ API routes in README.md are outdated or drifting.")
+        print("Run this script with --fix to automatically update them.")
+        return 1
 
 
 if __name__ == "__main__":
