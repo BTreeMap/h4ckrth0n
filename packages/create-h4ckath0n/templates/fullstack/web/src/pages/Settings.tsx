@@ -112,6 +112,7 @@ function PasskeyName({
             disabled={saving}
             className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
             aria-label="Save name"
+            title="Save name"
           >
             <Check className="w-4 h-4" />
           </Button>
@@ -122,6 +123,7 @@ function PasskeyName({
             onClick={cancel}
             className="h-8 w-8 text-text-muted hover:text-text"
             aria-label="Cancel rename"
+            title="Cancel rename"
           >
             <X className="w-4 h-4" />
           </Button>
@@ -149,8 +151,9 @@ function PasskeyName({
           variant="ghost"
           data-testid="passkey-edit-btn"
           onClick={startEdit}
-          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="h-6 w-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
           aria-label="Edit passkey name"
+          title="Edit passkey name"
         >
           <Pencil className="w-3 h-3" />
         </Button>
