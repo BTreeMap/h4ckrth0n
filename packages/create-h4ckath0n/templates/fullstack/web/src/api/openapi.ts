@@ -910,7 +910,7 @@ export interface components {
         PasskeyRegisterStartRequest: {
             /**
              * Display Name
-             * @description Human-facing display name for the new account.
+             * @description Human-facing display name.
              */
             display_name: string;
         };
@@ -1016,7 +1016,7 @@ export interface components {
             } | null;
             /**
              * Display Name
-             * @description Human-facing display name for the account.
+             * @description Human-facing display name.
              */
             display_name: string;
             /**

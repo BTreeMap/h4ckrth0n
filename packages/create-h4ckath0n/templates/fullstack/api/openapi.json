@@ -659,7 +659,7 @@
       "PasskeyRegisterStartRequest": {
         "properties": {
           "display_name": {
-            "description": "Human-facing display name for the new account.",
+            "description": "Human-facing display name.",
             "maxLength": 200,
             "title": "Display Name",
             "type": "string"
@@ -853,7 +853,7 @@
             "title": "Device Public Key Jwk"
           },
           "display_name": {
-            "description": "Human-facing display name for the account.",
+            "description": "Human-facing display name.",
             "maxLength": 200,
             "title": "Display Name",
             "type": "string"
