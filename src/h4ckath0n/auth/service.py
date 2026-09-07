@@ -57,8 +57,8 @@ async def register_user(
     display_name: str | None = None,
 ) -> User:
     hash_password, _verify = _require_password_extra()
-    result = await db.execute(select(User).filter(User.email == email))
-    if result.scalars().first():
+    # ⚡ Bolt: Use db.scalar() instead of execute().scalars().first() for performance
+    if await db.scalar(select(User.id).filter(User.email == email)):
         raise ValueError("Email already registered")
     role = "admin" if await _is_bootstrap_admin(email, settings, db) else "user"
     user = User(
@@ -82,8 +82,8 @@ _DUMMY_PASSWORD_HASH = (
 
 async def authenticate_user(db: AsyncSession, email: str, password: str) -> User | None:
     _hash, verify_password = _require_password_extra()
-    result = await db.execute(select(User).filter(User.email == email))
-    user = result.scalars().first()
+    # ⚡ Bolt: Use db.scalar() instead of execute().scalars().first() for performance
+    user = await db.scalar(select(User).filter(User.email == email))
     if user is None or not user.password_hash:
         verify_password(password, _DUMMY_PASSWORD_HASH)
         return None
@@ -172,13 +172,15 @@ async def confirm_password_reset(
     """Confirm a password reset and return the user."""
     hash_password, _verify = _require_password_extra()
     hashed = _hash_token(raw_token)
-    prt_result = await db.execute(
-        select(PasswordResetToken).filter(
-            PasswordResetToken.token_hash == hashed,
-            PasswordResetToken.used.is_(False),
+    # ⚡ Bolt: Use db.scalar() instead of execute().scalars().first() for performance
+    if (
+        prt := await db.scalar(
+            select(PasswordResetToken).filter(
+                PasswordResetToken.token_hash == hashed,
+                PasswordResetToken.used.is_(False),
+            )
         )
-    )
-    if (prt := prt_result.scalars().first()) is None:
+    ) is None:
         raise ValueError("Invalid or already-used reset token")
     if prt.expires_at.replace(tzinfo=UTC) < datetime.now(UTC):
         raise ValueError("Reset token expired")
