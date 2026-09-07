@@ -24,7 +24,7 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -90,7 +90,7 @@ jobs:
       channel: ${{ steps.compute.outputs.channel }}
       base_version: ${{ steps.compute.outputs.base_version }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           submodules: recursive
@@ -168,7 +168,7 @@ jobs:
     needs: [compute-version, check-existing]
     if: needs.check-existing.outputs.pypi_exists != 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -233,7 +233,7 @@ jobs:
     needs: [compute-version, check-existing]
     if: needs.check-existing.outputs.npm_exists != 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
