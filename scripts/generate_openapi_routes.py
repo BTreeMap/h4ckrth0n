@@ -51,7 +51,7 @@ def generate_routes_markdown() -> str:
         "uploads": "Uploads",
         "llm": "LLM Chat",
         "passkey": "Passkeys",
-        "password-auth": "Password Auth"
+        "password-auth": "Password Auth",
     }
     for tag in ["Other", "auth", "jobs", "uploads", "llm", "passkey", "password-auth"]:
         if tag not in tags_to_routes:
