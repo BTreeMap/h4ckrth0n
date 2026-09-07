@@ -44,24 +44,19 @@ def generate_routes_markdown() -> str:
 
     md = "<!-- BEGIN ROUTES -->\n"
 
+    titles = {
+        "Other": "General",
+        "auth": "Session",
+        "jobs": "Background Jobs",
+        "uploads": "Uploads",
+        "llm": "LLM Chat",
+        "passkey": "Passkeys",
+        "password-auth": "Password Auth"
+    }
     for tag in ["Other", "auth", "jobs", "uploads", "llm", "passkey", "password-auth"]:
         if tag not in tags_to_routes:
             continue
-        title = tag.capitalize()
-        if tag == "Other":
-            title = "General"
-        if tag == "auth":
-            title = "Session"
-        if tag == "jobs":
-            title = "Background Jobs"
-        if tag == "uploads":
-            title = "Uploads"
-        if tag == "llm":
-            title = "LLM Chat"
-        if tag == "passkey":
-            title = "Passkeys"
-        if tag == "password-auth":
-            title = "Password Auth"
+        title = titles.get(tag, tag.capitalize())
 
         md += f"\n### {title}\n"
         for line in tags_to_routes[tag]:

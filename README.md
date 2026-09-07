@@ -64,6 +64,7 @@ uv run uvicorn your_module:app --reload
 ## Built-in routes
 
 <!-- BEGIN ROUTES -->
+
 ### General
 - `GET /` — welcome
 - `GET /health` — health

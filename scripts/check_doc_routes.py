@@ -41,7 +41,7 @@ def get_app_routes() -> list[tuple[str, str]]:
     for path, path_item in paths.items():
         if path in FRAMEWORK_PATHS:
             continue
-        for method in path_item.keys():
+        for method in path_item:
             if method.upper() == "HEAD":
                 continue
             routes.append((method.upper(), path))
